@@ -88,8 +88,8 @@ class Sniffer
                 return $official;
             } elseif ($official === 'text/html'
                 || $official === 'text/xml' // FreshRSS
-                || $official === 'application/xml'
-            ) { // FreshRSS
+                || $official === 'application/xml' // FreshRSS
+            ) {
                 return $this->feed_or_html();
             }
 
