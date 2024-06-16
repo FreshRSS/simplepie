@@ -50,6 +50,10 @@ class Misc
      */
     public static function absolutize_url(string $relative, string $base)
     {
+        if (substr($relative, 0, 2) === '//') { // FreshRSS
+            //Protocol-relative URLs "//www.example.net"
+            return 'https:' . $relative;
+        }
         $iri = \SimplePie\IRI::absolutize(new \SimplePie\IRI($base), $relative);
         if ($iri === false) {
             return false;
