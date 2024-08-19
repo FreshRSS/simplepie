@@ -1890,6 +1890,7 @@ class SimplePie
      *
      * @param Base|DataCache|false $cache Cache handler, or false to not load from the cache
      * @return array{array<string, string>, string}|array{}|bool Returns true if the data was loaded from the cache, or an array of HTTP headers and sniffed type
+     * @phpstan-impure
      */
     protected function fetch_data(&$cache)
     {
@@ -1914,7 +1915,7 @@ class SimplePie
             // Load the Cache
             $this->data = $cache->get_data($cacheKey, []);
 
-            if ($cache->mtime() + $this->cache_duration > time()) { // FreshRSS
+            if (isset($this->data['mtime']) && $this->data['mtime'] + $this->cache_duration > time()) { // FreshRSS
                 $this->raw_data = false;
                 return true; // If the cache is still valid, just return true
             } elseif (!empty($this->data)) {
@@ -1949,7 +1950,8 @@ class SimplePie
                     // when requesting this file. (Note that it's up to the file to
                     // support this, but we don't always send the headers either.)
                     $this->check_modified = true;
-                    { // if (isset($this->data['headers']['last-modified']) || isset($this->data['headers']['etag'])) { // FreshRSS removed
+                    // @phpstan-ignore if.alwaysTrue
+                    if (true) { // if (isset($this->data['headers']['last-modified']) || isset($this->data['headers']['etag'])) { // FreshRSS
                         $headers = [
                             'Accept' => SimplePie::DEFAULT_HTTP_ACCEPT_HEADER,
                         ];
@@ -1985,15 +1987,15 @@ class SimplePie
                             return true;
                         }
                     }
-                    { // FreshRSS
+                    if (isset($file)) { // FreshRSS
                         $hash = $this->clean_hash($file->get_body_content());
                         if ($this->data['hash'] === $hash) {
-                            syslog(LOG_DEBUG, 'SimplePie hash cache match for ' . SimplePie_Misc::url_remove_credentials($this->feed_url));
+                            syslog(LOG_DEBUG, 'SimplePie hash cache match for ' . Misc::url_remove_credentials($this->feed_url));
                             $this->data['headers'] = $file->get_headers();
                             $cache->set_data($cacheKey, $this->data, $this->cache_duration);
                             return true; // Content unchanged even though server did not send a 304
                         } else {
-                            syslog(LOG_DEBUG, 'SimplePie hash cache no match for ' . SimplePie_Misc::url_remove_credentials($this->feed_url));
+                            syslog(LOG_DEBUG, 'SimplePie hash cache no match for ' . Misc::url_remove_credentials($this->feed_url));
                             $this->data['hash'] = $hash;
                         }
                     }
@@ -2124,7 +2126,7 @@ class SimplePie
                         'feed_url' => $file->get_final_requested_uri(),
                         'build' => Misc::get_build(),
                         'cache_expiration_time' => $this->cache_duration + time(),
-                        'hash' => $hash === '' ? $this->clean_hash($file->get_body_content()) : $hash, // FreshRSS
+                        'hash' => empty($hash) ? $this->clean_hash($file->get_body_content()) : $hash, // FreshRSS
                         'mtime' => time(), // FreshRSS
                     ];
 
