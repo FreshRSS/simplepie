@@ -1770,9 +1770,6 @@ class SimplePie
             }
 
             [$headers, $sniffed] = $fetched;
-            if (isset($this->data['hash']) && is_string($this->data['hash'])) { // FreshRSS
-                $hash = $this->data['hash'];
-            }
         }
 
         // Empty response check
@@ -1841,7 +1838,7 @@ class SimplePie
                         $this->data['headers'] = $headers;
                     }
                     $this->data['build'] = Misc::get_build();
-                    $this->data['hash'] = $hash === '' ? $this->clean_hash($this->raw_data) : $hash; // FreshRSS
+                    $this->data['hash'] = $this->data['hash'] ?? $this->clean_hash($this->raw_data); // FreshRSS
                     $this->data['mtime'] = time(); // FreshRSS
 
                     // Cache the file if caching is enabled
