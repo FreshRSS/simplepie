@@ -1988,11 +1988,12 @@ class SimplePie
                     { // FreshRSS
                         $hash = $this->clean_hash($file->get_body_content());
                         if ($this->data['hash'] === $hash) {
-                            syslog(LOG_DEBUG, 'SimplePie hash cache match for ' . $this->feed_url);
-                            $cache->touch();
+                            syslog(LOG_DEBUG, 'SimplePie hash cache match for ' . SimplePie_Misc::url_remove_credentials($this->feed_url));
+                            $this->data['headers'] = $file->get_headers();
+                            $cache->set_data($cacheKey, $this->data, $this->cache_duration);
                             return true; // Content unchanged even though server did not send a 304
                         } else {
-                            syslog(LOG_DEBUG, 'SimplePie hash cache no match for ' . $this->feed_url);
+                            syslog(LOG_DEBUG, 'SimplePie hash cache no match for ' . SimplePie_Misc::url_remove_credentials($this->feed_url));
                             $this->data['hash'] = $hash;
                         }
                     }
