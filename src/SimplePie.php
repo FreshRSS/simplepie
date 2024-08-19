@@ -1752,7 +1752,6 @@ class SimplePie
         $this->check_modified = false;
         $this->multifeed_objects = [];
         $cache = false;
-        $hash = '';
 
         if ($this->feed_url !== null) {
             $parsed_feed_url = $this->registry->call(Misc::class, 'parse_url', [$this->feed_url]);
