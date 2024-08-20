@@ -1937,14 +1937,9 @@ class SimplePie
                     $cache->delete_data($this->get_cache_filename($this->feed_url));
                     $this->data = [];
                 }
-                // If the cache is still valid, just return true // FreshRSS
-                elseif (isset($this->data['mtime']) && $this->data['mtime'] + $this->cache_duration > time()) {
-                    $this->raw_data = false;
-                    return true;
-                }
                 // Check if the cache has been updated
-                // @phpstan-ignore elseif.alwaysTrue
-                elseif (true) {  // isset($this->data['cache_expiration_time']) && $this->data['cache_expiration_time'] > time()) {  // FreshRSS
+                // elseif (isset($this->data['cache_expiration_time']) && $this->data['cache_expiration_time'] > time()) {  // FreshRSS
+                elseif (empty($this->data['mtime']) || $this->data['mtime'] + $this->cache_duration <= time()) {
                     // Want to know if we tried to send last-modified and/or etag headers
                     // when requesting this file. (Note that it's up to the file to
                     // support this, but we don't always send the headers either.)
