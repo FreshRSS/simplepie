@@ -113,7 +113,7 @@ class CachingTest extends TestCase
         }
 
         // Test that $expectedDataWritten is a subset of $writtenData
-        $this->assertEmpty(array_diff_assoc($expectedDataWritten, $writtenData));   // FreshRSS
+        $this->assertEmpty(array_udiff_assoc($expectedDataWritten, $writtenData, fn ($a, $b) => json_encode($a) <=> json_encode($b)));   // FreshRSS
     }
 
     /**

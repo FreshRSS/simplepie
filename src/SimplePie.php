@@ -1763,7 +1763,7 @@ class SimplePie
 
             // Fetch the data into $this->raw_data
             if (($fetched = $this->fetch_data($cache)) === true) {
-                return empty($this->data['mtime']) ? false : $this->data['mtime']; // FreshRSS
+                return $this->data['mtime'] ?? true; // FreshRSS
             } elseif ($fetched === false) {
                 return false;
             }
@@ -1985,7 +1985,7 @@ class SimplePie
                     }
                     if (isset($file)) { // FreshRSS
                         $hash = $this->clean_hash($file->get_body_content());
-                        if ($this->data['hash'] === $hash) {
+                        if (($this->data['hash'] ?? null) === $hash) {
                             syslog(LOG_DEBUG, 'SimplePie hash cache match for ' . Misc::url_remove_credentials($this->feed_url));
                             $this->data['headers'] = $file->get_headers();
                             $cache->set_data($cacheKey, $this->data, $this->cache_duration);
