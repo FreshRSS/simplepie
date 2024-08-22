@@ -69,7 +69,7 @@ class BaseDataCacheTest extends TestCase
         $this->assertSame($default, $cache->get_data($key, $default));
     }
 
-    // FreshRSS commented out
+    // FreshRSS commented out, to allow HTTP 304
     // public function testGetDataWithCacheExpiredReturnsDefault(): void
     // {
     //     $key = 'name';
