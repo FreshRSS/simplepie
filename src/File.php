@@ -264,8 +264,8 @@ class File implements Response
                                 }
                             }
                         } else {
-                            $this->error = 'Could not parse';    // FreshRSS
-                            $this->success = false;
+                            $this->error = 'Could not parse'; // FreshRSS
+                            $this->success = false; // FreshRSS
                             $this->on_http_response();
                         }
                     } else {
