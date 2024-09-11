@@ -1991,15 +1991,15 @@ class SimplePie
                         }
                     }
                     if (isset($file)) { // FreshRSS
-                        // Update cache metadata
-                        $this->data['mtime'] = time();
-                        $this->data['headers'] = array_map(function (array $values): string {
-                            return implode(',', $values);
-                        }, $file->get_headers());
                         $hash = $this->clean_hash($file->get_body_content());
-                        $cache->set_data($cacheKey, $this->data, $this->cache_duration);
-
                         if (($this->data['hash'] ?? null) === $hash) {
+                            // Update cache metadata
+                            $this->data['mtime'] = time();
+                            $this->data['headers'] = array_map(function (array $values): string {
+                                return implode(',', $values);
+                            }, $file->get_headers());
+                            $cache->set_data($cacheKey, $this->data, $this->cache_duration);
+
                             return true; // Content unchanged even though server did not send a 304
                         } else {
                             $this->data['hash'] = $hash;
