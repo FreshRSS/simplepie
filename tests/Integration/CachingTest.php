@@ -123,7 +123,7 @@ class CachingTest extends TestCase
      */
     public static function provideSavedCacheData(): array
     {
-        $defaultMtime = time();
+        $defaultMtime = time() - 1; // FreshRSS: -1 to account for tests running in the same second
         $defaultExpirationTime = $defaultMtime + 3600;
 
         $expectDefaultDataWritten = [
