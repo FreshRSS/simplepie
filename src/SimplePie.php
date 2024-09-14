@@ -1639,6 +1639,7 @@ class SimplePie
      * after having cleaned it from noisy elements such as statistics or comments.
      * FreshRSS
      * @return string $rss A hash of the cleaned content, or empty string in case of error.
+     * @see SimplePie::get_hash()
      */
     private function clean_hash(string $rss): string
     {
@@ -2177,6 +2178,7 @@ class SimplePie
      * Get the last hash of the feed
      *
      * @return string Hash of the content of the feed
+     * @see SimplePie::clean_hash()
      * FreshRSS
      */
     public function get_hash(): string
