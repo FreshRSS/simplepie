@@ -516,8 +516,8 @@ class SimplePie
     public $cache_duration = 3600;
 
     /**
-     * @var int Minimal cache duration (in seconds), overriding HTTP response headers `Cache-Control: max-age` and `Expires`.
-     * But no effect on `Cache-Control: no-store` and `Cache-Control: no-cache`
+     * @var int Minimal cache duration (in seconds), overriding HTTP response headers `Cache-Control: max-age` and `Expires`,
+     * but without effect on `Cache-Control: no-store` and `Cache-Control: no-cache` and `Cache-Control: must-revalidate`
      * @see SimplePie::set_cache_duration()
      * @access private
      * FreshRSS
@@ -525,8 +525,8 @@ class SimplePie
     public $cache_duration_min = 60;
 
     /**
-     * @var int Maximal cache duration (in seconds), overriding HTTP response headers `Cache-Control: max-age` and `Expires`.
-     * But no effect on `Cache-Control: no-store` and `Cache-Control: no-cache`
+     * @var int Maximal cache duration (in seconds), overriding HTTP response headers `Cache-Control: max-age` and `Expires`,
+     * but without effect on `Cache-Control: no-store` and `Cache-Control: no-cache`
      * @see SimplePie::set_cache_duration()
      * @access private
      * FreshRSS
@@ -1007,12 +1007,13 @@ class SimplePie
      * Set the length of time (in seconds) that the contents of a feed will be
      * cached
      *
-     * FreshRSS: Note that the cache is (partially) HTTP compliant,
-     * so minimum and maximum parameters have no effect on `Cache-Control: no-store` and `Cache-Control: no-cache`
+     * FreshRSS: The cache is (partially) HTTP compliant, with the following rules:
      *
      * @param int $seconds The feed content cache duration, which may be overriden by HTTP response headers)
-     * @param int $min The minimun cache duration (default: 60s), overriding HTTP response headers `Cache-Control: max-age` and `Expires`
-     * @param int $max The maximum cache duration (default: 24h), overriding HTTP response headers `Cache-Control: max-age` and `Expires`
+     * @param int $min The minimun cache duration (default: 60s), overriding HTTP response headers `Cache-Control: max-age` and `Expires`,
+     * but without effect on `Cache-Control: no-store` and `Cache-Control: no-cache` and `Cache-Control: must-revalidate`
+     * @param int $max The maximum cache duration (default: 24h), overriding HTTP response headers `Cache-Control: max-age` and `Expires`,
+     * but without effect on `Cache-Control: no-store` and `Cache-Control: no-cache`
      * @return void
      */
     public function set_cache_duration(int $seconds = 3600, ?int $min = null, ?int $max = null)
