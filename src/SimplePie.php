@@ -1851,7 +1851,7 @@ class SimplePie
                     $this->data['hash'] = $this->data['hash'] ?? $this->clean_hash($this->raw_data); // FreshRSS
 
                     // Cache the file if caching is enabled
-                    $this->data['cache_expiration_time'] = $this->cache_duration + time();
+                    $this->data['cache_expiration_time'] = \SimplePie\HTTP\Utils::negociate_cache_expiration_time($this->cache_duration, $this->data['headers'] ?? []);
 
                     if ($cache && !$cache->set_data($this->get_cache_filename($this->feed_url), $this->data, $this->cache_duration)) {
                         trigger_error("$this->cache_location is not writable. Make sure you've set the correct relative or absolute path, and that the location is server-writable.", E_USER_WARNING);
@@ -1972,7 +1972,7 @@ class SimplePie
                             $this->status_code = 0;
 
                             if ($this->force_cache_fallback) {
-                                $this->data['cache_expiration_time'] = $this->cache_duration + time(); // FreshRSS
+                                $this->data['cache_expiration_time'] = \SimplePie\HTTP\Utils::negociate_cache_expiration_time($this->cache_duration, $this->data['headers'] ?? []); // FreshRSS
                                 $cache->set_data($cacheKey, $this->data, $this->cache_duration);
 
                                 return true;
@@ -1987,7 +1987,7 @@ class SimplePie
                             $this->raw_data = false;
                             if (isset($file)) { // FreshRSS
                                 // Update cache metadata
-                                $this->data['cache_expiration_time'] = $this->cache_duration + time();
+                                $this->data['cache_expiration_time'] = \SimplePie\HTTP\Utils::negociate_cache_expiration_time($this->cache_duration, $this->data['headers'] ?? []);
                                 $this->data['headers'] = array_map(function (array $values): string {
                                     return implode(',', $values);
                                 }, $file->get_headers());
@@ -2001,7 +2001,7 @@ class SimplePie
                         $hash = $this->clean_hash($file->get_body_content());
                         if (($this->data['hash'] ?? null) === $hash) {
                             // Update cache metadata
-                            $this->data['cache_expiration_time'] = $this->cache_duration + time();
+                            $this->data['cache_expiration_time'] = \SimplePie\HTTP\Utils::negociate_cache_expiration_time($this->cache_duration, $this->data['headers'] ?? []);
                             $this->data['headers'] = array_map(function (array $values): string {
                                 return implode(',', $values);
                             }, $file->get_headers());
@@ -2138,7 +2138,7 @@ class SimplePie
                         'url' => $this->feed_url,
                         'feed_url' => $file->get_final_requested_uri(),
                         'build' => Misc::get_build(),
-                        'cache_expiration_time' => $this->cache_duration + time(),
+                        'cache_expiration_time' => \SimplePie\HTTP\Utils::negociate_cache_expiration_time($this->cache_duration, $this->data['headers'] ?? []), // FreshRSS
                         'cache_version' => self::CACHE_VERSION, // FreshRSS
                         'hash' => empty($hash) ? $this->clean_hash($file->get_body_content()) : $hash, // FreshRSS
                     ];
