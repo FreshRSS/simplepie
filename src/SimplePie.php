@@ -516,7 +516,7 @@ class SimplePie
     public $cache_duration = 3600;
 
     /**
-     * @var int Minimal cache duration (in seconds), overriding HTTP response headers `Cache-Control` and `Expires`,
+     * @var int Minimal cache duration (in seconds), overriding HTTP response headers `Cache-Control` and `Expires`
      * @see SimplePie::set_cache_duration()
      * @access private
      * FreshRSS
@@ -524,7 +524,7 @@ class SimplePie
     public $cache_duration_min = 60;
 
     /**
-     * @var int Maximal cache duration (in seconds), overriding HTTP response headers `Cache-Control` and `Expires`,
+     * @var int Maximal cache duration (in seconds), overriding HTTP response headers `Cache-Control` and `Expires`
      * @see SimplePie::set_cache_duration()
      * @access private
      * FreshRSS
@@ -1008,8 +1008,8 @@ class SimplePie
      * FreshRSS: The cache is (partially) HTTP compliant, with the following rules:
      *
      * @param int $seconds The feed content cache duration, which may be overridden by HTTP response headers)
-     * @param int $min The minimun cache duration (default: 60s), overriding HTTP response headers `Cache-Control` and `Expires`,
-     * @param int $max The maximum cache duration (default: 24h), overriding HTTP response headers `Cache-Control` and `Expires`,
+     * @param int $min The minimum cache duration (default: 60s), overriding HTTP response headers `Cache-Control` and `Expires`
+     * @param int $max The maximum cache duration (default: 24h), overriding HTTP response headers `Cache-Control` and `Expires`
      * @return void
      */
     public function set_cache_duration(int $seconds = 3600, ?int $min = null, ?int $max = null)
