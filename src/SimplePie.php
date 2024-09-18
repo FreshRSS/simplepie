@@ -2179,7 +2179,7 @@ class SimplePie
                         'hash' => empty($hash) ? $this->clean_hash($file->get_body_content()) : $hash, // FreshRSS
                     ];
 
-                    if (!$cache->set_data($cacheKey, $this->data, $this->cache_duration)) { // FreshRSS
+                    if (!$cache->set_data($cacheKey, $this->data, $this->cache_duration)) {
                         trigger_error("$this->cache_location is not writable. Make sure you've set the correct relative or absolute path, and that the location is server-writable.", E_USER_WARNING);
                     }
                 }
