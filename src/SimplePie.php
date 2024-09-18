@@ -2021,7 +2021,7 @@ class SimplePie
                                 // Update cache metadata
                                 $this->data['headers'] = array_map(function (array $values): string {
                                     return implode(',', $values);
-                                }, $file->get_headers()); // FreshRSS
+                                }, $file->get_headers());
                                 $this->data['cache_expiration_time'] = \SimplePie\HTTP\Utils::negociate_cache_expiration_time($this->data['headers'] ?? [], $this->cache_duration, $this->cache_duration_min, $this->cache_duration_max);
                             }
                             if (!$cache->set_data($cacheKey, $this->data, $this->cache_duration)) { // FreshRSS
@@ -2039,7 +2039,7 @@ class SimplePie
                                 return implode(',', $values);
                             }, $file->get_headers());
                             $this->data['cache_expiration_time'] = \SimplePie\HTTP\Utils::negociate_cache_expiration_time($this->data['headers'] ?? [], $this->cache_duration, $this->cache_duration_min, $this->cache_duration_max);
-                            if (!$cache->set_data($cacheKey, $this->data, $this->cache_duration)) { // FreshRSS
+                            if (!$cache->set_data($cacheKey, $this->data, $this->cache_duration)) {
                                 trigger_error("$this->cache_location is not writable. Make sure you've set the correct relative or absolute path, and that the location is server-writable.", E_USER_WARNING);
                             }
 
