@@ -11,7 +11,6 @@ namespace SimplePie\HTTP;
  */
 final class Utils
 {
-
     /**
      * Extracts `max-age` from the `Cache-Control` HTTP headers
      *
