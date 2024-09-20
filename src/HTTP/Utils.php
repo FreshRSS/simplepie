@@ -21,8 +21,8 @@ final class Utils
      */
     public static function get_http_max_age(array $http_headers): ?int
     {
-        $cache_control = $http_headers['cache-control'] ?? '';
-        if (is_string($cache_control) && $cache_control !== '' && preg_match('/\bmax-age=(\d+)\b/', $cache_control, $matches)) {
+        $cache_control = $http_headers['cache-control'] ?? null;
+        if (is_string($cache_control) && preg_match('/\bmax-age=(\d+)\b/', $cache_control, $matches)) {
             return (int) $matches[1];
         }
         return null;
