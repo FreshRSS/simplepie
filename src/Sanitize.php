@@ -670,7 +670,8 @@ class Sanitize implements RegistryAware
     /**
      * @return void
      */
-    protected function enforce_whitelist(DOMXPath $xpath, DOMDocument $document) {
+    protected function enforce_whitelist(DOMXPath $xpath, DOMDocument $document)
+    {
         $elements = $xpath->query('body//*');
         if ($elements === false) {
             throw new \SimplePie\Exception(sprintf(
