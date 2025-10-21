@@ -30,10 +30,10 @@ HTML
         );
 
         $sanitize_whitelist = new SimplePie_Sanitize();
-        $sanitize_whitelist->default_attr_whitelist([
+        $sanitize_whitelist->allowed_html_attributes([
             'title', 'role',
         ]);
-        $sanitize_whitelist->whitelist_tags([
+        $sanitize_whitelist->allowed_html_elements_with_attributes([
             'details' => ['open'],
             'summary' => [],
             'p' => [],
