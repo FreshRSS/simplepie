@@ -38,19 +38,14 @@ HTML
             'summary' => [],
             'p' => [],
         ]);
-        $this->assertSame(
+        self::assertSame(
             <<<HTML
-<details open title="Click to expand">
-    <summary data-xyz="123" aria-hidden="false">Details</summary>
-    <x-custom>
-        <p>...</p>
-    </x-custom>
-</details>
+<details open title="Click to expand"><summary data-xyz="123" aria-hidden="false">Details</summary><p>...</p></details>
 HTML
             ,
-            trim($sanitize->sanitize(
+            trim(preg_replace('/\R\s+/', '', $sanitize_whitelist->sanitize(
                 <<<HTML
-<details open title="Click to expand" onmouseover="alert(1)">
+<details open title="Click to expand" onmouseover="alert(1)" xyz="1">
     <summary data-xyz="123" aria-hidden="false">Details</summary>
     <x-custom>
         <p>...</p>
@@ -60,7 +55,7 @@ HTML
 HTML
                 ,
                 SIMPLEPIE_CONSTRUCT_HTML
-            )),
+            )) ?? ''),
             'Non-whitelisted tags and attributes should be cleaned'
         );
     }

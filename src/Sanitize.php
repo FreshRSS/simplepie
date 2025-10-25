@@ -54,6 +54,10 @@ class Sanitize implements RegistryAware
     public $allowed_html_elements_with_attributes = [];
     /** @var string[] */
     public $allowed_html_attributes = [];
+    /** @var bool */
+    public $allow_data_attr = true;
+    /** @var bool */
+    public $allow_aria_attr = true;
     /** @var array<string, array<string, string>> */
     public $add_attributes = ['audio' => ['preload' => 'none'], 'iframe' => ['sandbox' => 'allow-scripts allow-same-origin'], 'video' => ['preload' => 'none']];
     /** @var bool */
@@ -258,6 +262,22 @@ class Sanitize implements RegistryAware
     public function allowed_html_attributes(array $attrs = [])
     {
         $this->allowed_html_attributes = $attrs;
+    }
+
+    /**
+     * @param bool $allow Whether data-* should be allowed or not
+     * @return void
+     */
+    public function allow_data_attr(bool $allow = true) {
+        $this->allow_data_attr = $allow;
+    }
+
+    /**
+     * @param bool $allow Whether aria-* should be allowed or not
+     * @return void
+     */
+    public function allow_aria_attr(bool $allow = true) {
+        $this->allow_aria_attr = $allow;
     }
 
     /**
@@ -491,7 +511,7 @@ class Sanitize implements RegistryAware
                 }
 
                 if (!empty($this->allowed_html_elements_with_attributes)) {
-                    $this->enforce_allowed_html_nodes($document);
+                    $this->enforce_allowed_html_nodes($document, $this->allow_data_attr, $this->allow_aria_attr);
                 }
 
                 // Strip out HTML tags and attributes that might cause various security problems.
@@ -671,27 +691,51 @@ class Sanitize implements RegistryAware
      * Keep only allowed HTML elements (tags) and their allowed attributes.
      * @return void
      */
-    protected function enforce_allowed_html_nodes(\DOMNode $element)
+    protected function enforce_allowed_html_nodes(\DOMNode $element, bool $allow_data_attr = true, bool $allow_aria_attr = true)
     {
         if ($element instanceof \DOMElement) {
             $tag = $element->tagName;
-            $is_custom_element = str_contains($tag, '-');
-            if (!$is_custom_element && !isset($this->allowed_html_elements_with_attributes[$tag])) {
-                $parentNode = $element->parentNode;
-                if ($parentNode !== null) {
-                    $parentNode->removeChild($element);
-                    return;
+            $div = null;
+            $doc = $element->ownerDocument;
+            if ($doc !== null) {
+                $div = $doc->getElementsByTagName('body')->item(0);
+                if ($div !== null) {
+                    $div = $div->firstChild;
+                    if ($div !== null && $div->nodeName !== 'div') {
+                        $div = null;
+                    }
                 }
+            }
+            if ($element !== $div
+                && !in_array($tag, ['html', 'head', 'body'])
+                && !isset($this->allowed_html_elements_with_attributes[$tag])) {
+                if (!in_array($tag, ['script', 'style'])) {
+                    // Preserve children inside the disallowed element
+                    for ($i = $element->childNodes->length - 1; $i >= 0; $i--) {
+                        $child = $element->childNodes->item($i);
+                        if ($child === null) {
+                            continue;
+                        }
+                        if ($child instanceof \DOMText) {
+                            $child->nodeValue = htmlspecialchars($child->nodeValue ?? '', ENT_QUOTES, 'UTF-8');
+                        }
+                        $element->before($child);
+                        $this->enforce_allowed_html_nodes($child, $allow_data_attr, $allow_aria_attr);
+                    }
+                }
+                $element->remove();
             }
             $allowed_attrs = array_merge($this->allowed_html_elements_with_attributes[$tag] ?? [], $this->allowed_html_attributes);
             for ($i = $element->attributes->length - 1; $i >= 0; $i--) {
                 $attr = $element->attributes[$i]->nodeName;
-                if (str_starts_with($attr, 'data-') || str_starts_with($attr, 'aria-')) {
-                    // TODO: make this configurable
+                // Skip data-*, aria-* if allowed
+                if (($allow_data_attr && str_starts_with($attr, 'data-'))
+                    || ($allow_aria_attr && str_starts_with($attr, 'aria-'))) {
                     continue;
                 }
+
                 if (!in_array($attr, $allowed_attrs, true)) {
-                    $element->removeAttribute($attr);
+                    $element->removeAttributeNS(null, $attr);
                 }
             }
         }
@@ -699,7 +743,7 @@ class Sanitize implements RegistryAware
             for ($i = $element->childNodes->length - 1; $i >= 0; $i--) {
                 $child = $element->childNodes->item($i);
                 if ($child !== null) {
-                    $this->enforce_allowed_html_nodes($child);
+                    $this->enforce_allowed_html_nodes($child, $allow_data_attr, $allow_aria_attr);
                 }
             }
         }

@@ -678,6 +678,19 @@ class SimplePie
     public $allowed_html_attributes = [];
 
     /**
+     * @var bool Whether data-* should be allowed or not
+     * @see SimplePie::allow_data_attr()
+     * @access private
+     */
+    public $allow_data_attr = true;
+    /**
+     * @var bool Whether aria-* should be allowed or not
+     * @see SimplePie::allow_aria_attr()
+     * @access private
+     */
+    public $allow_aria_attr = true;
+
+    /**
      * @var bool Should we throw exceptions, or use the old-style error property?
      * @access private
      */
@@ -1554,6 +1567,22 @@ class SimplePie
     public function allowed_html_attributes(array $attrs = [])
     {
         $this->sanitize->allowed_html_attributes($attrs);
+    }
+
+    /**
+     * @param bool $allow Whether data-* should be allowed or not
+     * @return void
+     */
+    public function allow_data_attr(bool $allow = true) {
+        $this->sanitize->allow_data_attr($allow);
+    }
+
+    /**
+     * @param bool $allow Whether aria-* should be allowed or not
+     * @return void
+     */
+    public function allow_aria_attr(bool $allow = true) {
+        $this->sanitize->allow_aria_attr($allow);
     }
 
     /**
