@@ -1573,7 +1573,8 @@ class SimplePie
      * @param bool $allow Whether data-* should be allowed or not
      * @return void
      */
-    public function allow_data_attr(bool $allow = true) {
+    public function allow_data_attr(bool $allow = true)
+    {
         $this->sanitize->allow_data_attr($allow);
     }
 
@@ -1581,7 +1582,8 @@ class SimplePie
      * @param bool $allow Whether aria-* should be allowed or not
      * @return void
      */
-    public function allow_aria_attr(bool $allow = true) {
+    public function allow_aria_attr(bool $allow = true)
+    {
         $this->sanitize->allow_aria_attr($allow);
     }
 

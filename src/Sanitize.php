@@ -268,7 +268,8 @@ class Sanitize implements RegistryAware
      * @param bool $allow Whether data-* should be allowed or not
      * @return void
      */
-    public function allow_data_attr(bool $allow = true) {
+    public function allow_data_attr(bool $allow = true)
+    {
         $this->allow_data_attr = $allow;
     }
 
@@ -276,7 +277,8 @@ class Sanitize implements RegistryAware
      * @param bool $allow Whether aria-* should be allowed or not
      * @return void
      */
-    public function allow_aria_attr(bool $allow = true) {
+    public function allow_aria_attr(bool $allow = true)
+    {
         $this->allow_aria_attr = $allow;
     }
 
@@ -709,7 +711,7 @@ class Sanitize implements RegistryAware
             if ($element !== $div
                 && !in_array($tag, ['html', 'head', 'body'])
                 && !isset($this->allowed_html_elements_with_attributes[$tag])) {
-                if (!in_array($tag, ['script', 'style'])) {
+                if (!in_array($tag, ['script', 'style', 'svg', 'math'])) {
                     // Preserve children inside the disallowed element
                     for ($i = $element->childNodes->length - 1; $i >= 0; $i--) {
                         $child = $element->childNodes->item($i);
@@ -723,7 +725,11 @@ class Sanitize implements RegistryAware
                         $this->enforce_allowed_html_nodes($child, $allow_data_attr, $allow_aria_attr);
                     }
                 }
-                $element->remove();
+                $parent = $element->parentNode;
+                if ($parent) {
+                    $parent->removeChild($element);
+                    return;
+                }
             }
             $allowed_attrs = array_merge($this->allowed_html_elements_with_attributes[$tag] ?? [], $this->allowed_html_attributes);
             for ($i = $element->attributes->length - 1; $i >= 0; $i--) {
