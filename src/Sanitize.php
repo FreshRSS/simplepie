@@ -741,7 +741,7 @@ class Sanitize implements RegistryAware
                 }
 
                 if (!in_array($attr, $allowed_attrs, true)) {
-                    $element->removeAttributeNS(null, $attr);
+                    $element->removeAttributeNode($element->attributes[$i]);
                 }
             }
         }
