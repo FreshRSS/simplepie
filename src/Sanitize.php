@@ -697,19 +697,8 @@ class Sanitize implements RegistryAware
     {
         if ($element instanceof \DOMElement) {
             $tag = $element->tagName;
-            $div = null;
-            $doc = $element->ownerDocument;
-            if ($doc !== null) {
-                $div = $doc->getElementsByTagName('body')->item(0);
-                if ($div !== null) {
-                    $div = $div->firstChild;
-                    if ($div !== null && $div->nodeName !== 'div') {
-                        $div = null;
-                    }
-                }
-            }
-            if ($element !== $div
-                && !in_array($tag, ['html', 'head', 'body'])
+            $parent = $element->parentNode;
+            if (!in_array($tag, ['html', 'head', 'body', 'div'])
                 && !isset($this->allowed_html_elements_with_attributes[$tag])) {
                 if (!in_array($tag, ['script', 'style', 'svg', 'math'])) {
                     // Preserve children inside the disallowed element
@@ -721,11 +710,12 @@ class Sanitize implements RegistryAware
                         if ($child instanceof \DOMText) {
                             $child->nodeValue = htmlspecialchars($child->nodeValue ?? '', ENT_QUOTES, 'UTF-8');
                         }
-                        $element->before($child);
+                        if ($parent !== null) {
+                            $parent->insertBefore($child, $element);
+                        }
                         $this->enforce_allowed_html_nodes($child, $allow_data_attr, $allow_aria_attr);
                     }
                 }
-                $parent = $element->parentNode;
                 if ($parent !== null) {
                     $parent->removeChild($element);
                     return;
