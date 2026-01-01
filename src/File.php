@@ -139,7 +139,7 @@ class File implements Response
 
                 $responseHeaders = curl_exec($fp);
                 if (curl_errno($fp) === CURLE_WRITE_ERROR || curl_errno($fp) === CURLE_BAD_CONTENT_ENCODING) {
-                    curl_setopt($fp, CURLOPT_ENCODING, 'none');
+                    curl_setopt($fp, CURLOPT_ENCODING, null);
                     $responseHeaders = curl_exec($fp);
                 }
                 $this->status_code = curl_getinfo($fp, CURLINFO_HTTP_CODE);
