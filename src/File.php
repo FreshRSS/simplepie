@@ -121,8 +121,10 @@ class File implements Response
                     }
                     unset($curl_options[CURLOPT_HTTPHEADER]);
                 }
-                if (version_compare(\SimplePie\Misc::get_curl_version(), '7.10.5', '>=')) {
+                if (version_compare(\SimplePie\Misc::get_curl_version(), '7.21.6', '>=')) {
                     curl_setopt($fp, CURLOPT_ENCODING, '');
+                } elseif (version_compare(\SimplePie\Misc::get_curl_version(), '7.10.5', '>='))
+                    curl_setopt($fp, CURLOPT_ACCEPT_ENCODING, '');
                 }
                 curl_setopt($fp, CURLOPT_URL, $url);
                 curl_setopt($fp, CURLOPT_HEADER, 1);
@@ -139,7 +141,11 @@ class File implements Response
 
                 $responseHeaders = curl_exec($fp);
                 if (curl_errno($fp) === CURLE_WRITE_ERROR || curl_errno($fp) === CURLE_BAD_CONTENT_ENCODING) {
-                    curl_setopt($fp, CURLOPT_ENCODING, 'none');
+                    if (version_compare(\SimplePie\Misc::get_curl_version(), '7.21.6', '>=')) {
+                        curl_setopt($fp, CURLOPT_ACCEPT_ENCODING, 'none');
+                    } else {
+                        curl_setopt($fp, CURLOPT_ENCODING, 'none');
+                    }
                     $responseHeaders = curl_exec($fp);
                 }
                 $this->status_code = curl_getinfo($fp, CURLINFO_HTTP_CODE);
