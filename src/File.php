@@ -150,9 +150,9 @@ class File implements Response
                     $this->on_http_response($responseBody === false ? false : $responseHeaders . $responseBody, $curl_options);
                     $this->error = null; // FreshRSS
                     if (version_compare(\SimplePie\Misc::get_curl_version(), '7.21.6', '>=')) {
-                        curl_setopt($fp, CURLOPT_ACCEPT_ENCODING, 'none');
+                        curl_setopt($fp, CURLOPT_ACCEPT_ENCODING, null);
                     } else {
-                        curl_setopt($fp, CURLOPT_ENCODING, 'none');
+                        curl_setopt($fp, CURLOPT_ENCODING, null);
                     }
                     $responseHeaders = '';
                     $responseBody = curl_exec($fp);
