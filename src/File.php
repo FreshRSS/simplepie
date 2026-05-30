@@ -194,10 +194,10 @@ class File implements Response
                                 }
                             }
                             // FreshRSS: cross-origin authentication headers removal
-                            if (($url_parts_from = parse_url($url)) === false) {
+                            if (($url_parts_from = parse_url(strtolower($url))) === false) {
                                 throw new \InvalidArgumentException('Malformed URL: ' . $url);
                             }
-                            if (($url_parts_to = parse_url($location)) === false) {
+                            if (($url_parts_to = parse_url(strtolower($location))) === false) {
                                 $this->error = "Invalid redirect location: malformed URL “{$url}”";
                                 $this->success = false;
                                 return;
