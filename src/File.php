@@ -198,7 +198,7 @@ class File implements Response
                                 throw new \InvalidArgumentException('Malformed URL: ' . $url);
                             }
                             if (($url_parts_to = parse_url(strtolower($location))) === false) {
-                                $this->error = "Invalid redirect location: malformed URL “{$url}”";
+                                $this->error = "Invalid redirect location: malformed URL “{$location}”";
                                 $this->success = false;
                                 return;
                             }
