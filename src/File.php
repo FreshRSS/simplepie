@@ -185,8 +185,12 @@ class File implements Response
                                 unset($curl_options[CURLOPT_POST]);
                                 unset($curl_options[CURLOPT_POSTFIELDS]);
                                 if (is_array($curl_options[CURLOPT_HTTPHEADER] ?? null)) {
-                                    $curl_options[CURLOPT_HTTPHEADER] = array_filter($curl_options[CURLOPT_HTTPHEADER], fn (mixed $header): bool =>
-                                        is_string($header) && !str_starts_with(strtolower(trim($header)), 'content-type:'));
+                                    $curl_options[CURLOPT_HTTPHEADER] = array_filter(
+                                        $curl_options[CURLOPT_HTTPHEADER],
+                                        function ($header) {
+                                            return is_string($header) && substr(strtolower(trim($header)), 0, 13) !== 'content-type:';
+                                        }
+                                    );
                                 }
                             }
                             // FreshRSS: cross-origin authentication headers removal
@@ -199,11 +203,13 @@ class File implements Response
                                 return;
                             }
                             foreach ([&$url_parts_from, &$url_parts_to] as &$url_parts) {
-                                $url_parts['port'] ??= match ($url_parts['scheme']) {
-                                    'http' => 80,
-                                    'https' => 443,
-                                    default => 0,
-                                };
+                                if (!isset($url_parts['port']) && isset($url_parts['scheme'])) {
+                                    if ($url_parts['scheme'] === 'http') {
+                                        $url_parts['port'] = 80;
+                                    } elseif ($url_parts['scheme'] === 'https') {
+                                        $url_parts['port'] = 443;
+                                    }
+                                }
                             }
                             unset($url_parts);
                             $sameOriginRedirect =
@@ -213,8 +219,12 @@ class File implements Response
                             if (!$sameOriginRedirect) {
                                 unset($curl_options[CURLOPT_COOKIE]);
                                 if (is_array($curl_options[CURLOPT_HTTPHEADER] ?? null)) {
-                                    $curl_options[CURLOPT_HTTPHEADER] = array_filter($curl_options[CURLOPT_HTTPHEADER], fn (mixed $header): bool =>
-                                        is_string($header) && !preg_match('/^(Cookie|Authorization)\\s*:/i', $header));
+                                    $curl_options[CURLOPT_HTTPHEADER] = array_filter(
+                                        $curl_options[CURLOPT_HTTPHEADER],
+                                        function ($header) {
+                                            return is_string($header) && !preg_match('/^(Cookie|Authorization)\s*:/i', $header);
+                                        }
+                                    );
                                 }
                             }
 
