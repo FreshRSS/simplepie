@@ -103,4 +103,151 @@ HTML
 
         self::assertSame($expected, $sanitize->sanitize($given, SIMPLEPIE_CONSTRUCT_HTML, $base));
     }
+
+    /**
+     * @param string[] $disallowedSchemes List of schemes (protocols) to disallow
+     * @dataProvider disallowedUriSchemesProvider
+     */
+    public function testDisallowedUriSchemes(
+        string $input,
+        string $expected,
+        array $disallowedSchemes = ['javascript'],
+        bool $stripIframes = true
+    ): void {
+        $sanitize = new Sanitize();
+        $sanitize->disallow_uri_schemes($disallowedSchemes);
+
+        if (!$stripIframes) {
+            $sanitize->strip_htmltags = [];
+        }
+
+        $sanitize->set_registry(new Registry());
+        $base = 'http://example.com/';
+        self::assertSame($expected, $sanitize->sanitize($input, \SimplePie\SimplePie::CONSTRUCT_HTML, $base));
+    }
+
+    /**
+     * @return iterable<array{string,string,array<string>,bool}>
+     */
+    public static function disallowedUriSchemesProvider(): iterable
+    {
+        yield 'javascript scheme in href' => [
+            '<a href="javascript:alert(\'XSS\')">Click me</a>',
+            '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme with space in href' => [
+            '<a href="  javascript:alert(\'XSS\')">Click me</a>',
+            '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme in iframe src' => [
+            '<iframe src="javascript:alert(\'XSS\')"></iframe>',
+            '<iframe src="unsafe:javascript:alert(\'XSS\')" sandbox="allow-scripts allow-same-origin"></iframe>',
+            ['javascript'],
+            false,
+        ];
+
+        yield 'javascript scheme case insensitive' => [
+            '<a href="JaVaScRiPt:alert(\'XSS\')">Click me</a>',
+            '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'vbscript scheme blocked' => [
+            '<a href="vbscript:msgbox(\'XSS\')">Click me</a>',
+            '<a href="unsafe:vbscript:msgbox(\'XSS\')">Click me</a>',
+            ['javascript', 'vbscript', 'data'],
+            true,
+        ];
+
+        yield 'data scheme blocked' => [
+            '<a href="data:text/html,<script>alert(\'XSS\')</script>">Click me</a>',
+            '<a href="unsafe:data:text/html,%3Cscript%3Ealert(\'XSS\')%3C/script%3E">Click me</a>',
+            ['javascript', 'vbscript', 'data'],
+            true,
+        ];
+
+        yield 'safe http scheme unaffected' => [
+            '<a href="http://example.com/page">HTTP link</a>',
+            '<a href="http://example.com/page">HTTP link</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'safe http scheme with blanks unaffected' => [
+            '<a href=" http://example.com/page">HTTP link</a>',
+            '<a href="http://example.com/page">HTTP link</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'safe https scheme unaffected' => [
+            '<a href="https://example.com/page">HTTPS link</a>',
+            '<a href="https://example.com/page">HTTPS link</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'safe mailto scheme unaffected' => [
+            '<a href="mailto:test@example.com">Email</a>',
+            '<a href="mailto:test@example.com">Email</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme in form action' => [
+            '<form action="javascript:alert(\'XSS\')"></form>',
+            '<form action="unsafe:javascript:alert(\'XSS\')"></form>',
+            ['javascript'],
+            false,
+        ];
+
+        yield 'javascript scheme in blockquote cite' => [
+            '<blockquote cite="javascript:alert(\'XSS\')">Quote</blockquote>',
+            '<blockquote cite="unsafe:javascript:alert(\'XSS\')">Quote</blockquote>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme on mathml descendant href' => [
+            '<math><maction href="javascript:alert(\'XSS\')">x</maction></math>',
+            '<math><maction href="unsafe:javascript:alert(\'XSS\')">x</maction></math>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme on mathml root href' => [
+            '<math href="javascript:alert(\'XSS\')"><mtext>x</mtext></math>',
+            '<math href="unsafe:javascript:alert(\'XSS\')"><mtext>x</mtext></math>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme on svg descendant href' => [
+            '<svg><a href="javascript:alert(\'XSS\')">x</a></svg>',
+            '<svg><a href="unsafe:javascript:alert(\'XSS\')">x</a></svg>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme on svg descendant xlink:href' => [
+            '<svg xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="javascript:alert(\'XSS\')">x</a></svg>',
+            '<svg xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="unsafe:javascript:alert(\'XSS\')">x</a></svg>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'safe scheme on svg descendant xlink:href unaffected' => [
+            '<svg xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="https://example.com/page">x</a></svg>',
+            '<svg xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="https://example.com/page">x</a></svg>',
+            ['javascript'],
+            true,
+        ];
+    }
 }
