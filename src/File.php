@@ -305,6 +305,41 @@ class File implements Response
                                     $this->success = false;
                                     return;
                                 }
+
+                                // FreshRSS: POST to GET on redirect is not applicable here as fsockopen only ever performs GET requests.
+                                // FreshRSS: cross-origin authentication headers removal
+                                if (($url_parts_from = parse_url(strtolower($url))) === false) {
+                                    throw new \InvalidArgumentException('Malformed URL: ' . $url);
+                                }
+                                if (($url_parts_to = parse_url(strtolower($location))) === false) {
+                                    $this->error = "Invalid redirect location: malformed URL “{$location}”";
+                                    $this->success = false;
+                                    return;
+                                }
+                                foreach ([&$url_parts_from, &$url_parts_to] as &$url_parts) {
+                                    if (!isset($url_parts['port']) && isset($url_parts['scheme'])) {
+                                        if ($url_parts['scheme'] === 'http') {
+                                            $url_parts['port'] = 80;
+                                        } elseif ($url_parts['scheme'] === 'https') {
+                                            $url_parts['port'] = 443;
+                                        }
+                                    }
+                                }
+                                unset($url_parts);
+                                $sameOriginRedirect =
+                                    ($url_parts_from['scheme'] ?? '') === ($url_parts_to['scheme'] ?? '') &&
+                                    ($url_parts_from['host'] ?? '') === ($url_parts_to['host'] ?? '') &&
+                                    ($url_parts_from['port'] ?? '') === ($url_parts_to['port'] ?? '');
+                                if (!$sameOriginRedirect) {
+                                    $headers = array_filter(
+                                        $headers,
+                                        function (string $key) {
+                                            return !preg_match('/^(Cookie|Authorization)$/i', $key);
+                                        },
+                                        ARRAY_FILTER_USE_KEY
+                                    );
+                                }
+
                                 $this->__construct($location, $timeout, $redirects, $headers, $useragent, $force_fsockopen, $curl_options);
                                 return;
                             }
