@@ -112,14 +112,10 @@ HTML
         string $input,
         string $expected,
         array $disallowedSchemes = ['javascript'],
-        bool $stripIframes = true
     ): void {
         $sanitize = new Sanitize();
         $sanitize->disallow_uri_schemes($disallowedSchemes);
-
-        if (!$stripIframes) {
-            $sanitize->strip_htmltags = [];
-        }
+        $sanitize->strip_htmltags = [];
 
         $sanitize->set_registry(new Registry());
         $base = 'http://example.com/';
@@ -135,20 +131,17 @@ HTML
             '<a href="javascript:alert(\'XSS\')">Click me</a>',
             '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme with spaces in href' => [
             '<a href="  javascript:alert(\'XSS\')">Click me</a>',
             '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
             ['javascript'],
-            true,
         ];
         yield 'javascript scheme in iframe src' => [
             '<iframe src="javascript:alert(\'XSS\')"></iframe>',
             '<iframe src="unsafe:javascript:alert(\'XSS\')" sandbox="allow-scripts allow-same-origin"></iframe>',
             ['javascript'],
-            false,
         ];
 
         yield 'javascript scheme case insensitive' => [
@@ -162,161 +155,138 @@ HTML
             '<a href="%6A%61%76%61%73%63%72%69%70%74:alert(\'XSS\')">Click me</a>',
             '<a href="http://example.com/">Click me</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme with scheme colon url encoded' => [
             '<a href="javascript%3Aalert(\'XSS\')">Click me</a>',
             '<a href="http://example.com/javascript%3Aalert(\'XSS\')">Click me</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme encoded with numeric HTML entities' => [
             '<a href="&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;:alert(\'XSS\')">Click me</a>',
             '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme encoded with hex entities' => [
             '<a href="&#x6a;&#x61;&#x76;&#x61;&#x73;&#x63;&#x72;&#x69;&#x70;&#x74;:alert(\'XSS\')">Click me</a>',
             '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme with scheme colon as numeric HTML entity' => [
             '<a href="javascript&#58;alert(\'XSS\')">Click me</a>',
             '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme with scheme colon as hex HTML entity' => [
             '<a href="javascript&#x3a;alert(\'XSS\')">Click me</a>',
             '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme with scheme colon as named HTML entity' => [
             '<a href="javascript&colon;alert(\'XSS\')">Click me</a>',
             '<a href="http://example.com/javascript&amp;colon;alert(\'XSS\')">Click me</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme double encoded with URL encoding inside numeric HTML entities' => [
             '<a href="&#37;&#54;&#65;&#37;&#54;&#49;&#37;&#55;&#54;&#37;&#54;&#49;&#37;&#55;&#51;&#37;&#54;&#51;&#37;&#55;&#50;&#37;&#54;&#57;&#37;&#55;&#48;&#37;&#55;&#52;:alert(\'XSS\')">Click me</a>',
             '<a href="http://example.com/">Click me</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme with scheme colon double encoded with URL encoding inside numeric HTML entities' => [
             '<a href="javascript&#37;&#51;&#65;alert(\'XSS\')">Click me</a>',
             '<a href="http://example.com/javascript%3Aalert(\'XSS\')">Click me</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme with a double slash' => [
             '<a href="javascript://%0Aalert(\'XSS\')">Click me</a>',
             '<a href="unsafe:javascript://%0Aalert(\'xss\')">Click me</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'vbscript scheme blocked' => [
             '<a href="vbscript:msgbox(\'XSS\')">Click me</a>',
             '<a href="unsafe:vbscript:msgbox(\'XSS\')">Click me</a>',
             ['javascript', 'vbscript', 'data'],
-            true,
         ];
 
         yield 'data scheme blocked' => [
             '<a href="data:text/html,<script>alert(\'XSS\')</script>">Click me</a>',
             '<a href="unsafe:data:text/html,%3Cscript%3Ealert(\'XSS\')%3C/script%3E">Click me</a>',
             ['javascript', 'vbscript', 'data'],
-            true,
         ];
 
         yield 'safe http scheme unaffected' => [
             '<a href="http://example.com/page">HTTP link</a>',
             '<a href="http://example.com/page">HTTP link</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'safe http scheme with blanks unaffected' => [
             '<a href=" http://example.com/page">HTTP link</a>',
             '<a href="http://example.com/page">HTTP link</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'safe https scheme unaffected' => [
             '<a href="https://example.com/page">HTTPS link</a>',
             '<a href="https://example.com/page">HTTPS link</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'safe mailto scheme unaffected' => [
             '<a href="mailto:test@example.com">Email</a>',
             '<a href="mailto:test@example.com">Email</a>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme in form action' => [
             '<form action="javascript:alert(\'XSS\')"></form>',
             '<form action="unsafe:javascript:alert(\'XSS\')"></form>',
             ['javascript'],
-            false,
         ];
 
         yield 'javascript scheme in blockquote cite' => [
             '<blockquote cite="javascript:alert(\'XSS\')">Quote</blockquote>',
             '<blockquote cite="unsafe:javascript:alert(\'XSS\')">Quote</blockquote>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme on mathml descendant href' => [
             '<math><maction href="javascript:alert(\'XSS\')">x</maction></math>',
             '<math><maction href="unsafe:javascript:alert(\'XSS\')">x</maction></math>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme on mathml root href' => [
             '<math href="javascript:alert(\'XSS\')"><mtext>x</mtext></math>',
             '<math href="unsafe:javascript:alert(\'XSS\')"><mtext>x</mtext></math>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme on svg descendant href' => [
             '<svg><a href="javascript:alert(\'XSS\')">x</a></svg>',
             '<svg><a href="unsafe:javascript:alert(\'XSS\')">x</a></svg>',
             ['javascript'],
-            true,
         ];
 
         yield 'javascript scheme on svg descendant xlink:href' => [
             '<svg xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="javascript:alert(\'XSS\')">x</a></svg>',
             '<svg xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="unsafe:javascript:alert(\'XSS\')">x</a></svg>',
             ['javascript'],
-            true,
         ];
 
         yield 'safe scheme on svg descendant xlink:href unaffected' => [
             '<svg xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="https://example.com/page">x</a></svg>',
             '<svg xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="https://example.com/page">x</a></svg>',
             ['javascript'],
-            true,
         ];
     }
 }
