@@ -111,7 +111,7 @@ HTML
     public function testDisallowedUriSchemes(
         string $input,
         string $expected,
-        array $disallowedSchemes = ['javascript'],
+        array $disallowedSchemes = ['javascript']
     ): void {
         $sanitize = new Sanitize();
         $sanitize->disallow_uri_schemes($disallowedSchemes);
