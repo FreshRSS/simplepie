@@ -138,13 +138,12 @@ HTML
             true,
         ];
 
-        yield 'javascript scheme with space in href' => [
+        yield 'javascript scheme with spaces in href' => [
             '<a href="  javascript:alert(\'XSS\')">Click me</a>',
             '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
             ['javascript'],
             true,
         ];
-
         yield 'javascript scheme in iframe src' => [
             '<iframe src="javascript:alert(\'XSS\')"></iframe>',
             '<iframe src="unsafe:javascript:alert(\'XSS\')" sandbox="allow-scripts allow-same-origin"></iframe>',
@@ -155,6 +154,76 @@ HTML
         yield 'javascript scheme case insensitive' => [
             '<a href="JaVaScRiPt:alert(\'XSS\')">Click me</a>',
             '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme url encoded' => [
+            '<a href="%6A%61%76%61%73%63%72%69%70%74:alert(\'XSS\')">Click me</a>',
+            '<a href="http://example.com/">Click me</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme with scheme colon url encoded' => [
+            '<a href="javascript%3Aalert(\'XSS\')">Click me</a>',
+            '<a href="http://example.com/javascript%3Aalert(\'XSS\')">Click me</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme encoded with numeric HTML entities' => [
+            '<a href="&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;:alert(\'XSS\')">Click me</a>',
+            '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme encoded with hex entities' => [
+            '<a href="&#x6a;&#x61;&#x76;&#x61;&#x73;&#x63;&#x72;&#x69;&#x70;&#x74;:alert(\'XSS\')">Click me</a>',
+            '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme with scheme colon as numeric HTML entity' => [
+            '<a href="javascript&#58;alert(\'XSS\')">Click me</a>',
+            '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme with scheme colon as hex HTML entity' => [
+            '<a href="javascript&#x3a;alert(\'XSS\')">Click me</a>',
+            '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme with scheme colon as named HTML entity' => [
+            '<a href="javascript&colon;alert(\'XSS\')">Click me</a>',
+            '<a href="http://example.com/javascript&amp;colon;alert(\'XSS\')">Click me</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme double encoded with URL encoding inside numeric HTML entities' => [
+            '<a href="&#37;&#54;&#65;&#37;&#54;&#49;&#37;&#55;&#54;&#37;&#54;&#49;&#37;&#55;&#51;&#37;&#54;&#51;&#37;&#55;&#50;&#37;&#54;&#57;&#37;&#55;&#48;&#37;&#55;&#52;:alert(\'XSS\')">Click me</a>',
+            '<a href="http://example.com/">Click me</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme with scheme colon double encoded with URL encoding inside numeric HTML entities' => [
+            '<a href="javascript&#37;&#51;&#65;alert(\'XSS\')">Click me</a>',
+            '<a href="http://example.com/javascript%3Aalert(\'XSS\')">Click me</a>',
+            ['javascript'],
+            true,
+        ];
+
+        yield 'javascript scheme with a double slash' => [
+            '<a href="javascript://%0Aalert(\'XSS\')">Click me</a>',
+            '<a href="unsafe:javascript://%0Aalert(\'xss\')">Click me</a>',
             ['javascript'],
             true,
         ];
