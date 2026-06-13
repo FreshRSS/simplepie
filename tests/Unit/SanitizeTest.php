@@ -123,7 +123,7 @@ HTML
     }
 
     /**
-     * @return iterable<array{string,string,array<string>,bool}>
+     * @return iterable<array{string,string,array<string>}>
      */
     public static function disallowedUriSchemesProvider(): iterable
     {
