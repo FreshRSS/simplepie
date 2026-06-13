@@ -218,6 +218,7 @@ class File implements Response
                                 ($url_parts_from['port'] ?? '') === ($url_parts_to['port'] ?? '');
                             if (!$sameOriginRedirect) {
                                 unset($curl_options[CURLOPT_COOKIE]);
+                                unset($curl_options[CURLOPT_USERPWD]);
                                 if (is_array($curl_options[CURLOPT_HTTPHEADER] ?? null)) {
                                     $curl_options[CURLOPT_HTTPHEADER] = array_filter(
                                         $curl_options[CURLOPT_HTTPHEADER],
