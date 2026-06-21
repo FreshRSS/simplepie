@@ -189,7 +189,7 @@ HTML
 
         yield 'javascript scheme with scheme colon as named HTML entity' => [
             '<a href="javascript&colon;alert(\'XSS\')">Click me</a>',
-            '<a href="http://example.com/javascript&amp;colon;alert(\'XSS\')">Click me</a>',
+            '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>',
             ['javascript'],
         ];
 
