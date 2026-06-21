@@ -170,8 +170,22 @@ class File implements Response
                     if ($parser->parse()) {
                         $this->set_headers($parser->headers);
                         $this->body = $responseBody;
-                        if ((in_array($this->status_code, [300, 301, 302, 303, 307]) || $this->status_code > 307 && $this->status_code < 400) &&
-                            ($locationHeader = $this->get_header_line('location')) !== '' && ($this->redirects < $redirects || $redirects === -1)) { // FreshRSS: added infinite redirects for -1
+                        // Three-tier redirect handling:
+                        // 1. CURLOPT_FOLLOWLOCATION = truthy: Native cURL redirect handling without own security checks
+                        // 2. CURLOPT_FOLLOWLOCATION = falsy: No redirect handling at all
+                        // 3. CURLOPT_FOLLOWLOCATION not set or null: Custom PHP redirect handling (default, recommended)
+                        $followLocation = $curl_options[CURLOPT_FOLLOWLOCATION] ?? null;
+
+                        if ($followLocation) {
+                            // Native cURL redirect handling
+                            $finalUrl = curl_getinfo($fp, CURLINFO_EFFECTIVE_URL);
+                            if (is_string($finalUrl) && $finalUrl !== '') {
+                                $this->url = $finalUrl;
+                            }
+                        } elseif ($followLocation === null) {
+                            // Custom PHP redirect handling (default)
+                            if ((in_array($this->status_code, [300, 301, 302, 303, 307]) || $this->status_code > 307 && $this->status_code < 400) &&
+                                ($locationHeader = $this->get_header_line('location')) !== '' && ($this->redirects < $redirects || $redirects === -1)) { // FreshRSS: added infinite redirects for -1
                             $this->redirects++;
                             $location = \SimplePie\Misc::absolutize_url($locationHeader, $url);
                             if ($location === false) {
@@ -232,6 +246,7 @@ class File implements Response
                             $this->permanentUrlMutable = $this->permanentUrlMutable && ($this->status_code == 301 || $this->status_code == 308);
                             $this->__construct($location, $timeout, $redirects, $headers, $useragent, $force_fsockopen, $curl_options);
                             return;
+                            }
                         }
                     }
                 }
@@ -608,7 +623,6 @@ class File implements Response
         foreach ($curl_options as $curl_param => $curl_value) {
             curl_setopt($fp, $curl_param, $curl_value);
         }
-        curl_setopt($fp, CURLOPT_FOLLOWLOCATION, false); // FreshRSS
 
         return $fp;
     }

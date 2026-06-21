@@ -222,6 +222,121 @@ class ClientsTest extends TestCase
     }
 
     /**
+     * Test native cURL redirect handling when CURLOPT_FOLLOWLOCATION is enabled
+     * This test verifies that redirects are followed by cURL natively instead of custom handling
+     */
+    public function testNativeCurlRedirectHandling(): void
+    {
+        $client = new FileClient(new Registry(), [
+            'redirects' => 10,
+            'force_fsockopen' => false,
+            'curl_options' => [
+                CURLOPT_FOLLOWLOCATION => true, // Enable native cURL redirect handling
+            ],
+        ]);
+
+        $server = new MockWebServer();
+        $server->start();
+
+        $server->setDefaultResponse(new NotFoundResponse());
+        $url = $server->setResponseOfPath(
+            '/redirect-start',
+            new MockWebServerResponse('', ['Location: /redirect-end'], 302)
+        );
+        $finalLocation = $server->setResponseOfPath(
+            '/redirect-end',
+            new MockWebServerResponse('OK', [], 200)
+        );
+
+        $response = $client->request(Client::METHOD_GET, $url);
+
+        $server->stop();
+
+        self::assertSame(200, $response->get_status_code());
+        self::assertSame('OK', $response->get_body_content());
+        // With native cURL handling, permanent_uri should be the final URL (cURL doesn't track permanent redirects separately)
+        self::assertSame($finalLocation, $response->get_final_requested_uri());
+    }
+
+    /**
+     * Test that native cURL redirect handling bypasses custom security features
+     * This is expected behavior - when using CURLOPT_FOLLOWLOCATION, cURL handles everything
+     */
+    public function testNativeCurlRedirectHandlingBypassesSecurityFeatures(): void
+    {
+        // This test documents that native cURL handling bypasses security features
+        // In a real scenario, you would test that auth headers are NOT removed on cross-origin redirects
+
+        $client = new FileClient(new Registry(), [
+            'redirects' => 10,
+            'force_fsockopen' => false,
+            'curl_options' => [
+                CURLOPT_FOLLOWLOCATION => true, // Native handling bypasses security features
+            ],
+        ]);
+
+        $server = new MockWebServer();
+        $server->start();
+
+        $server->setDefaultResponse(new NotFoundResponse());
+        // Create a redirect chain
+        $url = $server->setResponseOfPath(
+            '/start',
+            new MockWebServerResponse('', ['Location: /end'], 302)
+        );
+        $finalLocation = $server->setResponseOfPath(
+            '/end',
+            new MockWebServerResponse('OK', [], 200)
+        );
+
+        $response = $client->request(Client::METHOD_GET, $url);
+        $server->stop();
+
+        // Verify redirect was followed
+        self::assertSame(200, $response->get_status_code());
+        self::assertSame('OK', $response->get_body_content());
+        self::assertSame($finalLocation, $response->get_final_requested_uri());
+    }
+
+    /**
+     * Test that CURLOPT_FOLLOWLOCATION = false prevents all redirect handling
+     * This verifies the "no redirect handling" mode where the client is responsible for redirects
+     */
+    public function testNoRedirectHandling(): void
+    {
+        $client = new FileClient(new Registry(), [
+            'redirects' => 10,
+            'force_fsockopen' => false,
+            'curl_options' => [
+                CURLOPT_FOLLOWLOCATION => false, // Disable all redirect handling
+            ],
+        ]);
+
+        $server = new MockWebServer();
+        $server->start();
+
+        $server->setDefaultResponse(new NotFoundResponse());
+        $url = $server->setResponseOfPath(
+            '/redirect-start',
+            new MockWebServerResponse('Redirecting', ['Location: /redirect-end'], 302)
+        );
+        $server->setResponseOfPath(
+            '/redirect-end',
+            new MockWebServerResponse('Final', [], 200)
+        );
+
+        $response = $client->request(Client::METHOD_GET, $url);
+        $server->stop();
+
+        // Verify redirect was NOT followed - should return the 302 response
+        self::assertSame(302, $response->get_status_code());
+        self::assertSame('Redirecting', $response->get_body_content());
+        self::assertStringContainsString('/redirect-start', $response->get_final_requested_uri());
+        // The location header should be present for the client to handle
+        self::assertNotEmpty($response->get_header_line('location'));
+    }
+
+    /**
      * @return iterable<array{client: Client, kind: "remote"|"remote-gzip"|"local", endianness: "le"|"be"}>
      */
     public static function utf16Provider(): iterable
