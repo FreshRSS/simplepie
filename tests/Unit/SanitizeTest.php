@@ -111,7 +111,7 @@ HTML
      */
     public function testDisallowedUriSchemes(
         string $input,
-        string|array $expected,
+        $expected,
         array $disallowedSchemes = ['javascript']
     ): void {
         $sanitize = new Sanitize();
