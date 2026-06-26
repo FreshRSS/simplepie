@@ -105,12 +105,13 @@ HTML
     }
 
     /**
+     * @param string|string[] $expected Expected output (string or array of valid alternatives)
      * @param string[] $disallowedSchemes List of schemes (protocols) to disallow
      * @dataProvider disallowedUriSchemesProvider
      */
     public function testDisallowedUriSchemes(
         string $input,
-        string $expected,
+        $expected,
         array $disallowedSchemes = ['javascript']
     ): void {
         $sanitize = new Sanitize();
@@ -119,11 +120,17 @@ HTML
 
         $sanitize->set_registry(new Registry());
         $base = 'http://example.com/';
-        self::assertSame($expected, $sanitize->sanitize($input, \SimplePie\SimplePie::CONSTRUCT_HTML, $base));
+        $result = $sanitize->sanitize($input, \SimplePie\SimplePie::CONSTRUCT_HTML, $base);
+
+        if (is_array($expected)) {
+            self::assertTrue(in_array($result, $expected, true), 'Result matches one of the expected values');
+        } else {
+            self::assertSame($expected, $result);
+        }
     }
 
     /**
-     * @return iterable<array{string,string,array<string>}>
+     * @return iterable<array{string,string|string[],array<string>}>
      */
     public static function disallowedUriSchemesProvider(): iterable
     {
@@ -189,7 +196,10 @@ HTML
 
         yield 'javascript scheme with scheme colon as named HTML entity' => [
             '<a href="javascript&colon;alert(\'XSS\')">Click me</a>',
-            '<a href="http://example.com/javascript&amp;colon;alert(\'XSS\')">Click me</a>',
+            [ // Two valid alternatives depending on the libxml version used for parsing:
+                '<a href="http://example.com/javascript&amp;colon;alert(\'XSS\')">Click me</a>', // libxml < 2.14.0
+                '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>', // libxml >= 2.14.0
+            ],
             ['javascript'],
         ];
 
