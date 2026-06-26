@@ -105,12 +105,13 @@ HTML
     }
 
     /**
+     * @param string|string[] $expected Expected output (string or array of valid alternatives)
      * @param string[] $disallowedSchemes List of schemes (protocols) to disallow
      * @dataProvider disallowedUriSchemesProvider
      */
     public function testDisallowedUriSchemes(
         string $input,
-        string $expected,
+        string|array $expected,
         array $disallowedSchemes = ['javascript']
     ): void {
         $sanitize = new Sanitize();
@@ -119,11 +120,17 @@ HTML
 
         $sanitize->set_registry(new Registry());
         $base = 'http://example.com/';
-        self::assertSame($expected, $sanitize->sanitize($input, \SimplePie\SimplePie::CONSTRUCT_HTML, $base));
+        $result = $sanitize->sanitize($input, \SimplePie\SimplePie::CONSTRUCT_HTML, $base);
+
+        if (is_array($expected)) {
+            self::assertTrue(in_array($result, $expected, true), 'Result matches one of the expected values');
+        } else {
+            self::assertSame($expected, $result);
+        }
     }
 
     /**
-     * @return iterable<array{string,string,array<string>}>
+     * @return iterable<array{string,string|string[],array<string>}>
      */
     public static function disallowedUriSchemesProvider(): iterable
     {
@@ -187,28 +194,14 @@ HTML
             ['javascript'],
         ];
 
-        {
-            ob_start();
-            phpinfo(INFO_MODULES);
-            $phpinfo = ob_get_clean() ?: '';
-            if (!preg_match('/libxml2 Version => (.*)/', $phpinfo, $matches)) {
-                throw new \Exception('Failed to get libxml2 version');
-            }
-            $libxml2_version = $matches[1];
-            if (version_compare($libxml2_version, '2.14.0') >= 0) {
-                // libxml2 started decoding &colon; into : in v2.14.0
-                // https://gitlab.gnome.org/GNOME/libxml2/-/commit/5951179239efa65a664a30e137effaa6e276576e
-                $expected = '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>';
-            } else {
-                $expected = '<a href="http://example.com/javascript&amp;colon;alert(\'XSS\')">Click me</a>';
-            }
-
-            yield 'javascript scheme with scheme colon as named HTML entity' => [
-                '<a href="javascript&colon;alert(\'XSS\')">Click me</a>',
-                $expected,
-                ['javascript'],
-            ];
-        }
+        yield 'javascript scheme with scheme colon as named HTML entity' => [
+            '<a href="javascript&colon;alert(\'XSS\')">Click me</a>',
+            [ // Two valid alternatives depending on the libxml version used for parsing:
+                '<a href="http://example.com/javascript&amp;colon;alert(\'XSS\')">Click me</a>', // libxml < 2.14.0
+                '<a href="unsafe:javascript:alert(\'XSS\')">Click me</a>', // libxml >= 2.14.0
+            ],
+            ['javascript'],
+        ];
 
         yield 'javascript scheme double encoded with URL encoding inside numeric HTML entities' => [
             '<a href="&#37;&#54;&#65;&#37;&#54;&#49;&#37;&#55;&#54;&#37;&#54;&#49;&#37;&#55;&#51;&#37;&#54;&#51;&#37;&#55;&#50;&#37;&#54;&#57;&#37;&#55;&#48;&#37;&#55;&#52;:alert(\'XSS\')">Click me</a>',
