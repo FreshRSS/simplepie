@@ -184,68 +184,68 @@ class File implements Response
                             // SimplePie PHP handling of HTTP redirections (default)
                             if ((in_array($this->status_code, [300, 301, 302, 303, 307]) || $this->status_code > 307 && $this->status_code < 400) &&
                                 ($locationHeader = $this->get_header_line('location')) !== '' && ($this->redirects < $redirects || $redirects === -1)) { // FreshRSS: added infinite redirects for -1
-                            $this->redirects++;
-                            $location = \SimplePie\Misc::absolutize_url($locationHeader, $url);
-                            if ($location === false) {
-                                $this->error = "Invalid redirect location, trying to base “{$locationHeader}” onto “{$url}”";
-                                $this->success = false;
-                                return;
-                            }
-
-                            // FreshRSS: POST to GET on redirect
-                            if (isset($curl_options[CURLOPT_POST]) && in_array($this->status_code, [301, 302, 303], true)) {	// Not for 307 and 308, which must not change the HTTP method
-                                unset($curl_options[CURLOPT_POST]);
-                                unset($curl_options[CURLOPT_POSTFIELDS]);
-                                if (is_array($curl_options[CURLOPT_HTTPHEADER] ?? null)) {
-                                    $curl_options[CURLOPT_HTTPHEADER] = array_filter(
-                                        $curl_options[CURLOPT_HTTPHEADER],
-                                        function ($header) {
-                                            return is_string($header) && substr(strtolower(trim($header)), 0, 13) !== 'content-type:';
-                                        }
-                                    );
+                                $this->redirects++;
+                                $location = \SimplePie\Misc::absolutize_url($locationHeader, $url);
+                                if ($location === false) {
+                                    $this->error = "Invalid redirect location, trying to base “{$locationHeader}” onto “{$url}”";
+                                    $this->success = false;
+                                    return;
                                 }
-                            }
-                            // FreshRSS: cross-origin authentication headers removal
-                            if (($url_parts_from = parse_url(strtolower($url))) === false) {
-                                throw new \InvalidArgumentException('Malformed URL: ' . $url);
-                            }
-                            if (($url_parts_to = parse_url(strtolower($location))) === false) {
-                                $this->error = "Invalid redirect location: malformed URL “{$location}”";
-                                $this->success = false;
-                                return;
-                            }
-                            foreach ([&$url_parts_from, &$url_parts_to] as &$url_parts) {
-                                if (!isset($url_parts['port']) && isset($url_parts['scheme'])) {
-                                    if ($url_parts['scheme'] === 'http') {
-                                        $url_parts['port'] = 80;
-                                    } elseif ($url_parts['scheme'] === 'https') {
-                                        $url_parts['port'] = 443;
+
+                                // FreshRSS: POST to GET on redirect
+                                if (isset($curl_options[CURLOPT_POST]) && in_array($this->status_code, [301, 302, 303], true)) {	// Not for 307 and 308, which must not change the HTTP method
+                                    unset($curl_options[CURLOPT_POST]);
+                                    unset($curl_options[CURLOPT_POSTFIELDS]);
+                                    if (is_array($curl_options[CURLOPT_HTTPHEADER] ?? null)) {
+                                        $curl_options[CURLOPT_HTTPHEADER] = array_filter(
+                                            $curl_options[CURLOPT_HTTPHEADER],
+                                            function ($header) {
+                                                return is_string($header) && substr(strtolower(trim($header)), 0, 13) !== 'content-type:';
+                                            }
+                                        );
                                     }
                                 }
-                            }
-                            unset($url_parts);
-                            $sameOriginRedirect =
-                                ($url_parts_from['scheme'] ?? '') === ($url_parts_to['scheme'] ?? '') &&
-                                ($url_parts_from['host'] ?? '') === ($url_parts_to['host'] ?? '') &&
-                                ($url_parts_from['port'] ?? '') === ($url_parts_to['port'] ?? '');
-                            if (!$sameOriginRedirect) {
-                                unset($curl_options[CURLOPT_COOKIE]);
-                                unset($curl_options[CURLOPT_USERPWD]);
-                                if (is_array($curl_options[CURLOPT_HTTPHEADER] ?? null)) {
-                                    $curl_options[CURLOPT_HTTPHEADER] = array_filter(
-                                        $curl_options[CURLOPT_HTTPHEADER],
-                                        function ($header) {
-                                            return is_string($header) && !preg_match('/^(Cookie|Authorization)\s*:/i', $header);
-                                        }
-                                    );
+                                // FreshRSS: cross-origin authentication headers removal
+                                if (($url_parts_from = parse_url(strtolower($url))) === false) {
+                                    throw new \InvalidArgumentException('Malformed URL: ' . $url);
                                 }
-                            }
+                                if (($url_parts_to = parse_url(strtolower($location))) === false) {
+                                    $this->error = "Invalid redirect location: malformed URL “{$location}”";
+                                    $this->success = false;
+                                    return;
+                                }
+                                foreach ([&$url_parts_from, &$url_parts_to] as &$url_parts) {
+                                    if (!isset($url_parts['port']) && isset($url_parts['scheme'])) {
+                                        if ($url_parts['scheme'] === 'http') {
+                                            $url_parts['port'] = 80;
+                                        } elseif ($url_parts['scheme'] === 'https') {
+                                            $url_parts['port'] = 443;
+                                        }
+                                    }
+                                }
+                                unset($url_parts);
+                                $sameOriginRedirect =
+                                    ($url_parts_from['scheme'] ?? '') === ($url_parts_to['scheme'] ?? '') &&
+                                    ($url_parts_from['host'] ?? '') === ($url_parts_to['host'] ?? '') &&
+                                    ($url_parts_from['port'] ?? '') === ($url_parts_to['port'] ?? '');
+                                if (!$sameOriginRedirect) {
+                                    unset($curl_options[CURLOPT_COOKIE]);
+                                    unset($curl_options[CURLOPT_USERPWD]);
+                                    if (is_array($curl_options[CURLOPT_HTTPHEADER] ?? null)) {
+                                        $curl_options[CURLOPT_HTTPHEADER] = array_filter(
+                                            $curl_options[CURLOPT_HTTPHEADER],
+                                            function ($header) {
+                                                return is_string($header) && !preg_match('/^(Cookie|Authorization)\s*:/i', $header);
+                                            }
+                                        );
+                                    }
+                                }
 
-                            $this->permanentUrlMutable = $this->permanentUrlMutable && ($this->status_code == 301 || $this->status_code == 308);
-                            $this->__construct($location, $timeout, $redirects, $headers, $useragent, $force_fsockopen, $curl_options);
-                            return;
+                                $this->permanentUrlMutable = $this->permanentUrlMutable && ($this->status_code == 301 || $this->status_code == 308);
+                                $this->__construct($location, $timeout, $redirects, $headers, $useragent, $force_fsockopen, $curl_options);
+                                return;
                             }
-                        // } elseif ($followLocation == false) {
+                            // } elseif ($followLocation == false) {
                             // No HTTP redirections at all
                         }
                     }
