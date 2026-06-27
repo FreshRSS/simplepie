@@ -84,7 +84,11 @@ class File implements Response
      * @param ?array<string, string> $headers
      * @param ?string $useragent
      * @param bool $force_fsockopen
-     * @param array<int, mixed> $curl_options
+     * @param array<int, mixed> $curl_options Specify cURL options.
+     *  Special case for HTTP redirect handling:
+     *   * CURLOPT_FOLLOWLOCATION = truthy: Native cURL handling of HTTP redirections _without_ SimplePie security checks;
+     *   * CURLOPT_FOLLOWLOCATION = falsy: No HTTP redirections at all;
+     *   * CURLOPT_FOLLOWLOCATION not set or null: SimplePie PHP handling of HTTP redirections with security checks (default, recommended).
      */
     public function __construct(string $url, int $timeout = 10, int $redirects = 5, ?array $headers = null, ?string $useragent = null, bool $force_fsockopen = false, array $curl_options = [])
     {
@@ -170,20 +174,17 @@ class File implements Response
                     if ($parser->parse()) {
                         $this->set_headers($parser->headers);
                         $this->body = $responseBody;
-                        // Three-tier redirect handling:
-                        // 1. CURLOPT_FOLLOWLOCATION = truthy: Native cURL redirect handling without own security checks
-                        // 2. CURLOPT_FOLLOWLOCATION = falsy: No redirect handling at all
-                        // 3. CURLOPT_FOLLOWLOCATION not set or null: Custom PHP redirect handling (default, recommended)
+                        // Handling of HTTP redirections:
                         $followLocation = $curl_options[CURLOPT_FOLLOWLOCATION] ?? null;
 
                         if ($followLocation) {
-                            // Native cURL redirect handling
+                            // Native cURL handling of HTTP redirections
                             $finalUrl = curl_getinfo($fp, CURLINFO_EFFECTIVE_URL);
                             if (is_string($finalUrl) && $finalUrl !== '') {
                                 $this->url = $finalUrl;
                             }
                         } elseif ($followLocation === null) {
-                            // Custom PHP redirect handling (default)
+                            // SimplePie PHP handling of HTTP redirections (default)
                             if ((in_array($this->status_code, [300, 301, 302, 303, 307]) || $this->status_code > 307 && $this->status_code < 400) &&
                                 ($locationHeader = $this->get_header_line('location')) !== '' && ($this->redirects < $redirects || $redirects === -1)) { // FreshRSS: added infinite redirects for -1
                             $this->redirects++;
@@ -247,6 +248,8 @@ class File implements Response
                             $this->__construct($location, $timeout, $redirects, $headers, $useragent, $force_fsockopen, $curl_options);
                             return;
                             }
+                        // } elseif ($followLocation == false) {
+                            // No HTTP redirections at all
                         }
                     }
                 }
