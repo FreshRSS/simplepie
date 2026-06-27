@@ -86,9 +86,9 @@ class File implements Response
      * @param bool $force_fsockopen
      * @param array<int, mixed> $curl_options Specify cURL options.
      *  Special case for HTTP redirect handling:
+     *   * CURLOPT_FOLLOWLOCATION not set or null: SimplePie PHP handling of HTTP redirections with security checks (default, recommended).
      *   * CURLOPT_FOLLOWLOCATION = truthy: Native cURL handling of HTTP redirections _without_ SimplePie security checks;
      *   * CURLOPT_FOLLOWLOCATION = falsy: No HTTP redirections at all;
-     *   * CURLOPT_FOLLOWLOCATION not set or null: SimplePie PHP handling of HTTP redirections with security checks (default, recommended).
      */
     public function __construct(string $url, int $timeout = 10, int $redirects = 5, ?array $headers = null, ?string $useragent = null, bool $force_fsockopen = false, array $curl_options = [])
     {
