@@ -167,9 +167,6 @@ class File implements Response
                         $responseHeaders = \SimplePie\HTTP\Parser::prepareHeaders($responseHeaders);
                     }
                     $this->on_http_response($responseHeaders . $responseBody, $curl_options);
-                    if (\PHP_VERSION_ID < 80000) {
-                        curl_close($fp);
-                    }
                     $parser = new \SimplePie\HTTP\Parser($responseHeaders, true);
                     if ($parser->parse()) {
                         $this->set_headers($parser->headers);
@@ -251,6 +248,9 @@ class File implements Response
                         // } elseif ($followLocation == false) {
                             // No HTTP redirections at all
                         }
+                    }
+                    if (\PHP_VERSION_ID < 80000) {
+                        curl_close($fp);
                     }
                 }
             } else {
