@@ -316,6 +316,7 @@ HTML
         self::assertSame($expected, $result);
     }
 
+    /** @return iterable<string, array{string, string}> */
     public static function disallowedElementChildOrderProvider(): iterable
     {
         yield 'disallowed wrapper preserves paragraph order' => [
