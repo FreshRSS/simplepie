@@ -728,7 +728,11 @@ class Sanitize implements RegistryAware
                             $child->nodeValue = htmlspecialchars($child->nodeValue ?? '', ENT_QUOTES, 'UTF-8');
                         }
                         if ($parent !== null) {
-                            $parent->insertBefore($child, $nextSibling);
+                            if ($nextSibling !== null) {
+                                $parent->insertBefore($child, $nextSibling);
+                            } else {
+                                $parent->appendChild($child);
+                            }
                         }
                         $this->enforce_allowed_html_nodes($child, $allow_data_attr, $allow_aria_attr);
                     }
