@@ -343,5 +343,10 @@ HTML
             '<p>One</p><span><p>Two</p><p>Three</p></span><em><p>Four</p><p>Five</p></em><p>Six</p>',
             '<p>One</p><p>Two</p><p>Three</p><p>Four</p><p>Five</p><p>Six</p>',
         ];
+
+        yield 'disallowed wrapper at end with no next sibling' => [
+            '<p>First</p><p>Second</p><span><p>Third</p><p>Fourth</p></span>',
+            '<p>First</p><p>Second</p><p>Third</p><p>Fourth</p>',
+        ];
     }
 }
