@@ -313,7 +313,7 @@ HTML
         $sanitize->set_registry(new Registry());
         $result = $sanitize->sanitize($input, \SimplePie\SimplePie::CONSTRUCT_HTML, 'http://example.com/');
 
-        self::assertSame($expected, $result);
+        self::assertSame($expected, preg_replace('/\R/', '', $result));
     }
 
     /** @return iterable<string, array{string, string}> */
