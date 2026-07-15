@@ -165,4 +165,43 @@ class ParserTest extends TestCase
             'content-security-policy' => ["default-src 'self' http://example.com", 'script-src http://example.com/'],
         ], $parser->headers);
     }
+
+    public function testEarlyHintsAreSkipped(): void
+    {
+        $earlyHints = "HTTP/1.1 103 Early Hints\r\nLink: </style.css>; rel=preload; as=style\r\n\r\n";
+        $response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nfeed body";
+
+        $parser = new Parser($earlyHints . $response, true);
+
+        self::assertTrue($parser->parse());
+        self::assertSame(1.1, $parser->http_version);
+        self::assertSame(200, $parser->status_code);
+        self::assertSame('OK', $parser->reason);
+        self::assertSame(['content-type' => ['text/plain']], $parser->headers);
+        self::assertSame('feed body', $parser->body);
+    }
+
+    public function testMultipleEarlyHintsAreSkipped(): void
+    {
+        $earlyHints = "HTTP/1.1 103 Early Hints\r\nLink: </style.css>; rel=preload; as=style\r\n\r\n";
+        $response = "HTTP/1.1 308 Permanent Redirect\r\nLocation: https://example.com/feed\r\n\r\n";
+
+        $parser = new Parser($earlyHints . $earlyHints . $response, true);
+
+        self::assertTrue($parser->parse());
+        self::assertSame(308, $parser->status_code);
+        self::assertSame('Permanent Redirect', $parser->reason);
+        self::assertSame(['location' => ['https://example.com/feed']], $parser->headers);
+        self::assertSame('', $parser->body);
+    }
+
+    public function testIncompleteEarlyHintsResponseFails(): void
+    {
+        $parser = new Parser("HTTP/1.1 103 Early Hints\r\nLink: </style.css>; rel=preload; as=style\r\n\r\n", true);
+
+        self::assertFalse($parser->parse());
+        self::assertSame(0, $parser->status_code);
+        self::assertSame([], $parser->headers);
+        self::assertSame('', $parser->body);
+    }
 }
