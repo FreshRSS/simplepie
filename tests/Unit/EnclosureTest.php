@@ -192,6 +192,123 @@ XML
     }
 
     /**
+     * @dataProvider getEnclosuresMediaGroupAlternativesProvider
+     * @param string[] $expectedAllUrls
+     * @param string[] $expectedFilteredUrls
+     */
+    public function test_get_enclosures_exclude_media_group_alternatives(string $data, array $expectedAllUrls, array $expectedFilteredUrls): void
+    {
+        $feed = new SimplePie();
+        $feed->set_raw_data($data);
+        $feed->enable_cache(false);
+        $feed->init();
+
+        $item = $feed->get_item(0);
+        self::assertInstanceOf(Item::class, $item);
+
+        $getUrls = static function (?array $enclosures): array {
+            return array_map(static function (Enclosure $enclosure): ?string {
+                return $enclosure->get_link();
+            }, $enclosures ?? []);
+        };
+
+        self::assertSame($expectedAllUrls, $getUrls($item->get_enclosures()));
+        self::assertSame($expectedFilteredUrls, $getUrls($item->get_enclosures(true)));
+    }
+
+    /**
+     * @return iterable<array{string, string[], string[]}>
+     */
+    public static function getEnclosuresMediaGroupAlternativesProvider(): iterable
+    {
+        yield 'Test media:group keeps only the isDefault media:content' => [
+            <<<XML
+            <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+                <channel>
+                    <title>Test media group isDefault</title>
+                    <link>http://example.net/tests/</link>
+                    <item>
+                        <title>Test media group isDefault 1</title>
+                        <link>http://example.net/tests/#1.1</link>
+                        <media:group>
+                            <media:content url="http://example.net/videos/1-480.mp4" type="video/mp4" width="854" height="480" />
+                            <media:content url="http://example.net/videos/1-1080.mp4" type="video/mp4" width="1920" height="1080" isDefault="true" />
+                            <media:content url="http://example.net/videos/1-720.mp4" type="video/mp4" width="1280" height="720" />
+                        </media:group>
+                    </item>
+                </channel>
+            </rss>
+XML
+            ,
+            [
+                'http://example.net/videos/1-480.mp4',
+                'http://example.net/videos/1-1080.mp4',
+                'http://example.net/videos/1-720.mp4',
+            ],
+            [
+                'http://example.net/videos/1-1080.mp4',
+            ],
+        ];
+
+        yield 'Test media:group keeps the first media:content without isDefault' => [
+            <<<XML
+            <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+                <channel>
+                    <title>Test media group first</title>
+                    <link>http://example.net/tests/</link>
+                    <item>
+                        <title>Test media group first 1</title>
+                        <link>http://example.net/tests/#2.1</link>
+                        <media:group>
+                            <media:content url="http://example.net/videos/2-1080.mp4" type="video/mp4" width="1920" height="1080" />
+                            <media:content url="http://example.net/videos/2-720.mp4" type="video/mp4" width="1280" height="720" />
+                        </media:group>
+                    </item>
+                </channel>
+            </rss>
+XML
+            ,
+            [
+                'http://example.net/videos/2-1080.mp4',
+                'http://example.net/videos/2-720.mp4',
+            ],
+            [
+                'http://example.net/videos/2-1080.mp4',
+            ],
+        ];
+
+        yield 'Test media:group with relative URLs and other enclosures kept' => [
+            <<<XML
+            <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+                <channel>
+                    <title>Test media group relative</title>
+                    <link>http://example.net/tests/</link>
+                    <item>
+                        <title>Test media group relative 1</title>
+                        <link>http://example.net/tests/#3.1</link>
+                        <enclosure url="http://example.net/audio/3.mp3" type="audio/mpeg" />
+                        <media:group>
+                            <media:content url="/videos/3-720.mp4" type="video/mp4" width="1280" height="720" />
+                            <media:content url="/videos/3-480.mp4" type="video/mp4" width="854" height="480" />
+                        </media:group>
+                    </item>
+                </channel>
+            </rss>
+XML
+            ,
+            [
+                'http://example.net/videos/3-720.mp4',
+                'http://example.net/videos/3-480.mp4',
+                'http://example.net/audio/3.mp3',
+            ],
+            [
+                'http://example.net/videos/3-720.mp4',
+                'http://example.net/audio/3.mp3',
+            ],
+        ];
+    }
+
+    /**
      * @dataProvider getEnclosureIntAttributesProvider
      */
     public function test_enclosure_int_attributes(string $data, ?int $expectedDuration, ?int $expectedChannels, ?int $expectedLength): void
