@@ -5,21 +5,25 @@
 
 declare(strict_types=1);
 
+namespace SimplePie\Tests\Unit;
+
 use PHPUnit\Framework\TestCase;
+use SimplePie\Registry;
+use SimplePie\Sanitize;
 
 class SanitizeSrcsetTest extends TestCase
 {
     private function sanitize(string $html, string $base = 'https://example.com/'): string
     {
-        $sanitize = new SimplePie_Sanitize();
-        $sanitize->set_registry(new SimplePie_Registry());
+        $sanitize = new Sanitize();
+        $sanitize->set_registry(new Registry());
         $sanitize->allowed_html_elements_with_attributes([
             'picture' => [],
             'source' => ['type', 'src', 'srcset', 'sizes', 'media', 'height', 'width'],
             'img' => ['src', 'srcset', 'sizes', 'alt', 'width', 'height'],
         ]);
 
-        return $sanitize->sanitize($html, SIMPLEPIE_CONSTRUCT_HTML, $base);
+        return $sanitize->sanitize($html, \SimplePie\SimplePie::CONSTRUCT_HTML, $base);
     }
 
     public function testPicksSmallestSrcsetWidthWhenSrcIsDataUri(): void
