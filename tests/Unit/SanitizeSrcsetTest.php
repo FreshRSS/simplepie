@@ -13,10 +13,17 @@ use SimplePie\Sanitize;
 
 class SanitizeSrcsetTest extends TestCase
 {
-    private function sanitize(string $html, string $base = 'https://example.com/'): string
+    /**
+     * @param array<string> $https_domains
+     */
+    private function sanitize(string $html, string $base = 'https://example.com/', array $https_domains = []): string
     {
         $sanitize = new Sanitize();
         $sanitize->set_registry(new Registry());
+        // Configure as SimplePie does, so srcset handling is exercised alongside
+        // the single-URL replace_urls() pass rather than in isolation.
+        $sanitize->set_url_replacements();
+        $sanitize->set_https_domains($https_domains);
         $sanitize->allowed_html_elements_with_attributes([
             'picture' => [],
             'source' => ['type', 'src', 'srcset', 'sizes', 'media', 'height', 'width'],
@@ -209,12 +216,33 @@ class SanitizeSrcsetTest extends TestCase
 
     public function testDropsDisallowedSchemesFromSrcset(): void
     {
-        // The srcset rewrite runs after replace_urls, so a disallowed scheme must
-        // not survive in srcset nor be written into the src fallback.
+        // srcset is never seen by replace_urls, so a disallowed scheme must be
+        // blocked here, and must not reach the src fallback either.
         $html = '<img src="" srcset="javascript:alert(1) 100w, https://example.com/a.jpg 500w" alt="x">';
         $out = $this->sanitize($html);
         self::assertStringNotContainsString('javascript:', $out);
         self::assertStringContainsString('src="https://example.com/a.jpg"', $out);
+    }
+
+    public function testForcesHttpsInSrcsetAsWellAsSrc(): void
+    {
+        // replace_urls() upgrades src on a forced-HTTPS domain. srcset has to get
+        // the same upgrade here, otherwise the browser picks a candidate and loads
+        // it over http: mixed content on exactly the images this rewrite targets.
+        $html = '<img src="http://cdn.example.com/p.jpg" '
+            . 'srcset="http://cdn.example.com/a.jpg 100w, http://cdn.example.com/b.jpg 500w" alt="x">';
+        $out = $this->sanitize($html, 'https://example.com/', ['cdn.example.com']);
+        self::assertStringContainsString('src="https://cdn.example.com/p.jpg"', $out);
+        self::assertStringContainsString('https://cdn.example.com/a.jpg 100w', $out);
+        self::assertStringContainsString('https://cdn.example.com/b.jpg 500w', $out);
+        self::assertStringNotContainsString('http://cdn.example.com', $out);
+    }
+
+    public function testLeavesHttpSrcsetAloneOffForcedHttpsDomain(): void
+    {
+        $html = '<img src="http://other.example.net/p.jpg" srcset="http://other.example.net/a.jpg 100w" alt="x">';
+        $out = $this->sanitize($html, 'https://example.com/', ['cdn.example.com']);
+        self::assertStringContainsString('http://other.example.net/a.jpg 100w', $out);
     }
 
     public function testRemovesSrcsetWhenAllEntriesDisallowed(): void

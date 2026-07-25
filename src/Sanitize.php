@@ -1014,17 +1014,20 @@ class Sanitize implements RegistryAware
     }
 
     /**
-     * Absolutise each URL in `srcset` on `<img>` and `<source>` against the
-     * document base, dropping entries with a disallowed URI scheme (this
-     * runs after `replace_urls`, so entries written into `src` below would
-     * otherwise bypass that scheme check). For `<img>` only, when `src` is
-     * empty or a recognised placeholder (lazy-loading pattern), write the
-     * smallest `Nw` entry (or, failing that, the lowest-density `Nx` entry)
-     * as a fallback. The browser uses `srcset` for actual selection; `src`
-     * only loads when `srcset` can't be honoured (legacy browsers,
-     * non-browser API consumers), so the smallest is the safest fallback
-     * by bandwidth and is never larger than what `srcset` would have
-     * picked.
+     * Give every URL in `srcset` the same treatment `replace_urls()` gives a
+     * single-URL attribute: absolutise against the document base, block a
+     * disallowed URI scheme, force HTTPS where configured. `srcset` holds a
+     * list rather than one URL, so it cannot go in `replace_url_attributes`
+     * and nothing else in the pipeline touches it.
+     *
+     * For `<img>` only, when `src` is empty or a recognised placeholder
+     * (lazy-loading pattern), write the smallest `Nw` entry (or, failing
+     * that, the lowest-density `Nx` entry) as a fallback. The browser uses
+     * `srcset` for actual selection; `src` only loads when `srcset` can't be
+     * honoured (legacy browsers, non-browser API consumers), so the smallest
+     * is the safest fallback by bandwidth and is never larger than what
+     * `srcset` would have picked. This runs before `replace_urls()`, so that
+     * `src` still goes through the normal single-URL pass afterwards.
      */
     private function rewrite_img_srcset(\DOMElement $element): void
     {
@@ -1035,10 +1038,17 @@ class Sanitize implements RegistryAware
         $absolutised = [];
         foreach ($entries as $e) {
             $abs = $this->registry->call(Misc::class, 'absolutize_url', [$e['url'], $this->base]);
-            if (!is_string($abs) || $abs === '' || !$this->is_allowed_scheme($abs)) {
+            if (!is_string($abs) || $abs === '') {
                 continue;
             }
-            $absolutised[] = ['url' => $abs, 'descriptor' => $e['descriptor'], 'w' => $e['w'], 'x' => $e['x']];
+            // Same condition as replace_urls(), but a blocked entry is dropped
+            // instead of being kept with an `unsafe:` prefix: an entry the
+            // browser must never pick has no reason to stay in the candidate
+            // list, and unlike `src` the attribute tolerates being shorter.
+            if ($this->disallowed_uri_schemes !== [] && !$this->is_allowed_scheme($abs)) {
+                continue;
+            }
+            $absolutised[] = ['url' => $this->https_url($abs), 'descriptor' => $e['descriptor'], 'w' => $e['w'], 'x' => $e['x']];
         }
         if ($absolutised === []) {
             $element->removeAttribute('srcset');
