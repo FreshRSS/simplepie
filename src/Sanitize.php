@@ -1045,7 +1045,9 @@ class Sanitize implements RegistryAware
             return;
         }
         $element->setAttribute('srcset', implode(', ', array_map(
-            static fn (array $e): string => $e['descriptor'] === '' ? $e['url'] : $e['url'] . ' ' . $e['descriptor'],
+            static function (array $e): string {
+                return $e['descriptor'] === '' ? $e['url'] : $e['url'] . ' ' . $e['descriptor'];
+            },
             $absolutised
         )));
 
@@ -1058,12 +1060,20 @@ class Sanitize implements RegistryAware
         if (!$this->is_placeholder_src($current)) {
             return;
         }
-        $candidates = array_values(array_filter($absolutised, static fn (array $e): bool => $e['w'] > 0));
+        $candidates = array_values(array_filter($absolutised, static function (array $e): bool {
+            return $e['w'] > 0;
+        }));
         if ($candidates !== []) {
-            usort($candidates, static fn (array $a, array $b): int => $a['w'] <=> $b['w']);
+            usort($candidates, static function (array $a, array $b): int {
+                return $a['w'] <=> $b['w'];
+            });
         } else {
-            $candidates = array_values(array_filter($absolutised, static fn (array $e): bool => $e['x'] > 0.0));
-            usort($candidates, static fn (array $a, array $b): int => $a['x'] <=> $b['x']);
+            $candidates = array_values(array_filter($absolutised, static function (array $e): bool {
+                return $e['x'] > 0.0;
+            }));
+            usort($candidates, static function (array $a, array $b): int {
+                return $a['x'] <=> $b['x'];
+            });
         }
         if ($candidates === []) {
             return;
@@ -1084,8 +1094,8 @@ class Sanitize implements RegistryAware
         if ($src === '') {
             return true;
         }
-        return str_starts_with($src, 'data:') &&
-            (strlen($src) < 128 || str_starts_with($src, 'data:image/gif;base64,R0lGODlh'));
+        return strpos($src, 'data:') === 0 &&
+            (strlen($src) < 128 || strpos($src, 'data:image/gif;base64,R0lGODlh') === 0);
     }
 
     /**
@@ -1115,12 +1125,12 @@ class Sanitize implements RegistryAware
             while ($pos < $len && !ctype_space($srcset[$pos])) {
                 $pos++;
             }
-            $url = substr($srcset, $start, $pos - $start);
+            $url = (string) substr($srcset, $start, $pos - $start);
             if ($url === '') {
                 break;
             }
             $descriptor = '';
-            if (str_ends_with($url, ',')) {
+            if (substr($url, -1) === ',') {
                 // Trailing comma terminates the entry: URL without descriptor
                 $url = rtrim($url, ',');
             } else {
@@ -1128,7 +1138,7 @@ class Sanitize implements RegistryAware
                 if ($end === false) {
                     $end = $len;
                 }
-                $descriptor = trim(substr($srcset, $pos, $end - $pos));
+                $descriptor = trim((string) substr($srcset, $pos, $end - $pos));
                 $pos = $end;
             }
             if ($url === '') {

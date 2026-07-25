@@ -162,7 +162,9 @@ class SanitizeSrcsetTest extends TestCase
         self::assertStringContainsString('https://example.com/img/b.jpg 1500w', $out);
         self::assertStringContainsString('sizes="100vw"', $out);
         // <source> has no src attribute even if the img placeholder logic considered it.
-        self::assertDoesNotMatchRegularExpression('/<source[^>]*\ssrc=/', $out);
+        // preg_match rather than a regex assertion: the assertion was renamed between
+        // the PHPUnit majors this package supports.
+        self::assertSame(0, preg_match('/<source[^>]*\ssrc=/', $out));
     }
 
     public function testPreservesLongInlineBase64Src(): void
