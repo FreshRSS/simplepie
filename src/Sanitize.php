@@ -750,8 +750,8 @@ class Sanitize implements RegistryAware
             for ($i = $element->attributes->length - 1; $i >= 0; $i--) {
                 $attr = $element->attributes[$i]->nodeName;
                 // Skip data-*, aria-* if allowed
-                if (($allow_data_attr && str_starts_with($attr, 'data-'))
-                    || ($allow_aria_attr && str_starts_with($attr, 'aria-'))) {
+                if (($allow_data_attr && strpos($attr, 'data-') === 0)
+                    || ($allow_aria_attr && strpos($attr, 'aria-') === 0)) {
                     continue;
                 }
 
