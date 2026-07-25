@@ -75,6 +75,18 @@ class SanitizeSrcsetTest extends TestCase
         self::assertStringNotContainsString('srcset="/img/', $out);
     }
 
+    public function testEmptySrcWithBaseStillGetsSrcsetFallback(): void
+    {
+        // The allowed-node pass must run before `replace_urls()`. Otherwise an
+        // empty `src` is resolved to the document base first, the placeholder
+        // check no longer recognises it, and `src` is left pointing at the
+        // page the feed item came from instead of an image.
+        $html = '<img src="" srcset="/img/a.jpg 100w, /img/b.jpg 500w" alt="x">';
+        $out = $this->sanitize($html, 'https://example.com/articles/page');
+        self::assertStringContainsString('src="https://example.com/img/a.jpg"', $out);
+        self::assertStringNotContainsString('src="https://example.com/articles/page"', $out);
+    }
+
     public function testKeepsLegitimateImgSrc(): void
     {
         $html = '<img src="https://example.com/real.jpg" srcset="https://example.com/a.jpg 100w, https://example.com/b.jpg 500w" alt="x">';
