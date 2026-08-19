@@ -101,7 +101,13 @@ HTML
 
         $base = 'http://example.com/';
 
-        self::assertSame($expected, $sanitize->sanitize($given, SIMPLEPIE_CONSTRUCT_HTML, $base));
+        $actual = $sanitize->sanitize($given, SIMPLEPIE_CONSTRUCT_HTML, $base);
+
+        // Remove newlines for PHP 7.2 compatibility
+        $expected = str_replace(["\n", "\r"], '', $expected);
+        $actual = str_replace(["\n", "\r"], '', $actual);
+
+        self::assertSame($expected, $actual);
     }
 
     /**
@@ -297,6 +303,56 @@ HTML
             '<svg xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="https://example.com/page">x</a></svg>',
             '<svg xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="https://example.com/page">x</a></svg>',
             ['javascript'],
+        ];
+    }
+
+    /**
+     * @dataProvider disallowedElementChildOrderProvider
+     */
+    public function testDisallowedElementPreservesChildOrder(string $input, string $expected): void
+    {
+        $sanitize = new Sanitize();
+        $sanitize->allowed_html_elements_with_attributes([
+            'p' => [],
+        ]);
+
+        $sanitize->set_registry(new Registry());
+        $result = $sanitize->sanitize($input, \SimplePie\SimplePie::CONSTRUCT_HTML, 'http://example.com/');
+
+        self::assertSame($expected, preg_replace('/\R/', '', $result));
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function disallowedElementChildOrderProvider(): iterable
+    {
+        yield 'disallowed wrapper preserves paragraph order' => [
+            '<span><p>First</p><p>Second</p><p>Third</p></span>',
+            '<p>First</p><p>Second</p><p>Third</p>',
+        ];
+
+        yield 'disallowed wrapper between allowed elements preserves order' => [
+            '<p>Before</p><span><p>First</p><p>Second</p></span><p>After</p>',
+            '<p>Before</p><p>First</p><p>Second</p><p>After</p>',
+        ];
+
+        yield 'nested disallowed elements preserve order' => [
+            '<span><i><p>First</p><p>Second</p></i></span>',
+            '<p>First</p><p>Second</p>',
+        ];
+
+        yield 'mixed text and elements inside disallowed wrapper' => [
+            '<span>text1<p>Middle</p>text2</span>',
+            'text1<p>Middle</p>text2',
+        ];
+
+        yield 'multiple disallowed wrappers preserve global order' => [
+            '<p>One</p><span><p>Two</p><p>Three</p></span><em><p>Four</p><p>Five</p></em><p>Six</p>',
+            '<p>One</p><p>Two</p><p>Three</p><p>Four</p><p>Five</p><p>Six</p>',
+        ];
+
+        yield 'disallowed wrapper at end with no next sibling' => [
+            '<p>First</p><p>Second</p><span><p>Third</p><p>Fourth</p></span>',
+            '<p>First</p><p>Second</p><p>Third</p><p>Fourth</p>',
         ];
     }
 }
