@@ -304,6 +304,48 @@ HTML
             '<svg xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="https://example.com/page">x</a></svg>',
             ['javascript'],
         ];
+
+        yield 'data scheme in href' => [
+            '<a href="data:text/html,<script>alert(1)</script>">Click me</a>',
+            '<a href="unsafe:data:text/html,%3Cscript%3Ealert(1)%3C/script%3E">Click me</a>',
+            ['javascript', 'data'],
+        ];
+
+        yield 'data scheme in iframe src' => [
+            '<iframe src="data:text/html,x"></iframe>',
+            '<iframe src="unsafe:data:text/html,x" sandbox="allow-scripts allow-same-origin"></iframe>',
+            ['javascript', 'data'],
+        ];
+
+        yield 'data scheme case insensitive' => [
+            '<a href="DATA:text/html,x">Click me</a>',
+            '<a href="unsafe:data:text/html,x">Click me</a>',
+            ['javascript', 'data'],
+        ];
+
+        yield 'data image kept on img src' => [
+            '<img src="data:image/png;base64,iVBORw0KGgo=">',
+            '<img src="data:image/png;base64,iVBORw0KGgo=">',
+            ['javascript', 'data'],
+        ];
+
+        yield 'data non-image blocked on img src' => [
+            '<img src="data:text/html,x">',
+            '<img src="unsafe:data:text/html,x">',
+            ['javascript', 'data'],
+        ];
+
+        yield 'data image blocked on href' => [
+            '<a href="data:image/png;base64,iVBORw0KGgo=">Click me</a>',
+            '<a href="unsafe:data:image/png;base64,iVBORw0KGgo=">Click me</a>',
+            ['javascript', 'data'],
+        ];
+
+        yield 'data scheme unaffected when not disallowed' => [
+            '<a href="data:text/html,x">Click me</a>',
+            '<a href="data:text/html,x">Click me</a>',
+            ['javascript'],
+        ];
     }
 
     /**
