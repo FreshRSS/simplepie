@@ -15,11 +15,13 @@ class SanitizeSrcsetTest extends TestCase
 {
     /**
      * @param array<string> $https_domains
+     * @param array<string> $disallowed_schemes
      */
-    private function sanitize(string $html, string $base = 'https://example.com/', array $https_domains = []): string
+    private function sanitize(string $html, string $base = 'https://example.com/', array $https_domains = [], array $disallowed_schemes = ['javascript']): string
     {
         $sanitize = new Sanitize();
         $sanitize->set_registry(new Registry());
+        $sanitize->disallow_uri_schemes($disallowed_schemes);
         // Configure as SimplePie does, so srcset handling is exercised alongside
         // the single-URL replace_urls() pass rather than in isolation.
         $sanitize->set_url_replacements();
@@ -251,5 +253,17 @@ class SanitizeSrcsetTest extends TestCase
         $out = $this->sanitize($html);
         self::assertStringNotContainsString('srcset', $out);
         self::assertStringContainsString('src="https://example.com/x.jpg"', $out);
+    }
+
+    public function testDropsDataSrcsetEntryWhenDataIsDisallowed(): void
+    {
+        // is_allowed_uri() exempts data:image on src-like attributes, not srcset,
+        // so with `data` disallowed the same URI survives in src but not as a
+        // srcset candidate.
+        $png = 'data:image/png;base64,' . str_repeat('A', 200);
+        $html = '<img src="' . $png . '" srcset="' . $png . ' 1x, https://example.com/a.jpg 2x" alt="x">';
+        $out = $this->sanitize($html, 'https://example.com/', [], ['javascript', 'data']);
+        self::assertStringContainsString('src="' . $png . '"', $out);
+        self::assertStringContainsString('srcset="https://example.com/a.jpg 2x"', $out);
     }
 }

@@ -1075,7 +1075,7 @@ class Sanitize implements RegistryAware
             // instead of being kept with an `unsafe:` prefix: an entry the
             // browser must never pick has no reason to stay in the candidate
             // list, and unlike `src` the attribute tolerates being shorter.
-            if ($this->disallowed_uri_schemes !== [] && !$this->is_allowed_scheme($abs)) {
+            if ($this->disallowed_uri_schemes !== [] && !$this->is_allowed_uri($element->tagName, 'srcset', $abs)) {
                 continue;
             }
             $absolutised[] = ['url' => $this->https_url($abs), 'descriptor' => $e['descriptor'], 'w' => $e['w'], 'x' => $e['x']];
