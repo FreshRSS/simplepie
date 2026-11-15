@@ -11,6 +11,9 @@ namespace Dom;
 
 const HTML_NO_DEFAULT_NS = 2147483648;
 
+// Hide from PHPStan to avoid divergent signature shapes of the legacy aliases
+if (!defined('__PHPSTAN_RUNNING__')):
+
 // The polyfilled node classes
 class_alias(\DOMNode::class, 'Dom\Node', false);
 class_alias(\DOMElement::class, 'Dom\Element', false);
@@ -32,7 +35,7 @@ final class XPath extends \DOMXPath
      * @param string $prefix
      * @param string $namespaceURI
      */
-    public function registerNamespace($prefix, $namespaceURI)
+    public function registerNamespace($prefix, $namespaceURI): bool
     {
         $this->registeredPrefixes[$prefix] = true;
         return parent::registerNamespace($prefix, $namespaceURI);
@@ -58,9 +61,8 @@ final class XPath extends \DOMXPath
      *
      * @param string $expression
      * @param \DOMNode|null $contextNode
-     * @return \DOMNodeList|false
      */
-    public function query($expression, $contextNode = null, $registerNodeNS = true)
+    public function query($expression, $contextNode = null, $registerNodeNS = true): \DOMNodeList
     {
         $translated = $this->translate($expression);
         $result = @parent::query($translated, $contextNode, $registerNodeNS);
@@ -90,11 +92,45 @@ final class HTMLDocument extends \DOMDocument
         }
 
         try {
-            $document->loadHTML($source, $options);
+            // `HTML_NO_DEFAULT_NS` is unknown to the legacy `loadHTML()`
+            $document->loadHTML($source, $options & ~HTML_NO_DEFAULT_NS);
         } catch (\ValueError $e) {
             // the native API silently creates an empty document.
         }
 
         return $document;
     }
+
+    /**
+     * Normalise to `attr=""` for parity.
+     * It also emits end tags for void elements (e.g. `</source>`).
+     */
+    public function saveHTML(?\DOMNode $node = null): string|false
+    {
+        $html = parent::saveHTML($node);
+        if ($html === false) {
+            return false;
+        }
+        // Drop void-element end tags emitted for e.g. `<source>`:
+        $html = (string) preg_replace('#(<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)\b[^>]*?>)</\2>#i', '$1', $html);
+        return (string) preg_replace_callback('#<[\w:-]+[^>]*?>#', static function (array $match): string {
+            $bools = 'allowfullscreen|async|autofocus|autoplay|checked|controls|default|defer|disabled|formnovalidate|hidden|inert|ismap|itemscope|loop|multiple|muted|nomodule|novalidate|open|playsinline|readonly|required|reversed|selected';
+            // Only scan outside quoted attribute values, which have no raw `"`:
+            $parts = preg_split('#(="[^"]*")#', $match[0], -1, PREG_SPLIT_DELIM_CAPTURE);
+            if ($parts === false) {
+                return $match[0];
+            }
+            foreach ($parts as $i => $part) {
+                if ($i % 2 === 0) {
+                    $replaced = preg_replace('#\s(' . $bools . ')(?=[\s/>])#i', ' $1=""', $part);
+                    if ($replaced !== null) {
+                        $parts[$i] = $replaced;
+                    }
+                }
+            }
+            return implode('', $parts);
+        }, $html) ?: $html;
+    }
 }
+
+endif;
