@@ -17,6 +17,13 @@ parameters:
             - build/*?
             - vendor/*
 
+    # For PHP < 8.4
+    ignoreErrors:
+        -
+            identifier: class.notFound
+            messages:
+                - '#Dom\\\S+#'
+
     treatPhpDocTypesAsCertain: false # TODO: Fix
 
 includes:

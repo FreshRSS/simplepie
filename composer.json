@@ -24,7 +24,7 @@
         }
     ],
     "require": {
-        "php": ">=8.4.0",
+        "php": ">=7.4.0",
         "ext-dom": "*",
         "ext-pcre": "*",
         "ext-xml": "*",
@@ -49,6 +49,9 @@
         "mf2/mf2": "Microformat module that allows for parsing HTML for microformats"
     },
     "autoload": {
+        "files": [
+            "compat/dom.php"
+        ],
         "psr-4": {
             "SimplePie\\": "src"
         },
