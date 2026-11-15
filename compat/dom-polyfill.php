@@ -120,9 +120,10 @@ final class Element extends \DOMElement
 
     /**
      * Native `Dom\Element::getAttribute()` return null when the attribute is missing
+     * @return string|null
      */
     #[\ReturnTypeWillChange]
-    public function getAttribute(string $qualifiedName): ?string
+    public function getAttribute($qualifiedName)
     {
         return $this->hasAttribute($qualifiedName) ? parent::getAttribute($qualifiedName) : null;
     }
