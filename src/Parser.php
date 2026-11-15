@@ -69,15 +69,16 @@ class Parser implements RegistryAware
      */
     public function parse(string &$data, string $encoding, string $url = '')
     {
-        if (class_exists('DOMXpath') && function_exists('Mf2\parse')) {
-            $doc = new \DOMDocument();
-            @$doc->loadHTML($data);
-            $xpath = new \DOMXpath($doc);
+        if (class_exists(\Dom\XPath::class) && function_exists('Mf2\parse')) {
+            // NB: Unlike with the legacy DOM API, parsing never fails (no recovery needed),
+            // and errors are swallowed by `LIBXML_NOERROR`.
+            $doc = \Dom\HTMLDocument::createFromString($data, LIBXML_NOERROR);
+            $xpath = new \Dom\XPath($doc);
             // Check for both h-feed and h-entry, as both a feed with no entries
             // and a list of entries without an h-feed wrapper are both valid.
             $query = '//*[contains(concat(" ", @class, " "), " h-feed ") or '.
                 'contains(concat(" ", @class, " "), " h-entry ")]';
-            /** @var \DOMNodeList<\DOMElement> $result */
+            /** @var \Dom\NodeList<\Dom\Element> $result */
             $result = $xpath->query($query);
             if ($result->length !== 0) {
                 return $this->parse_microformats($data, $url);

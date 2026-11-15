@@ -122,16 +122,16 @@ class LocatorTest extends TestCase
         $locator->set_registry($registry);
 
         $expected = [];
-        $document = new DOMDocument();
-        $document->loadHTML((string) $data->body);
-        $xpath = new DOMXPath($document);
+        $document = \Dom\HTMLDocument::createFromString((string) $data->body, LIBXML_NOERROR | \Dom\HTML_NO_DEFAULT_NS);
+        $xpath = new \Dom\XPath($document);
 
-        /** @var \DOMNodeList<\DOMElement> $queryResult */
         $queryResult = $xpath->query('//link');
 
         foreach ($queryResult as $element) {
-            /** @var \DOMElement $element */
-            $expected[] = 'http://example.com' . $element->getAttribute('href');
+            if (!$element instanceof \Dom\Element) {
+                continue;
+            }
+            $expected[] = 'http://example.com' . ($element->getAttribute('href') ?? '');
         }
         //$expected = SimplePie_Misc::get_element('link', $data->body);
 

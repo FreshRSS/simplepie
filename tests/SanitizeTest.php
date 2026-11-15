@@ -40,7 +40,7 @@ HTML
         ]);
         self::assertSame(
             <<<HTML
-<details open title="Click to expand"><summary data-xyz="123" aria-hidden="false">Details</summary><p>...</p></details>
+<details open="" title="Click to expand"><summary data-xyz="123" aria-hidden="false">Details</summary><p>...</p></details>
 HTML
             ,
             trim(preg_replace('/\R\s+/', '', $sanitize_whitelist->sanitize(
