@@ -2029,7 +2029,6 @@ class SimplePie
             $cache = new BaseDataCache($cache);
         }
 
-        // @phpstan-ignore-next-line Enforce PHPDoc type.
         if ($cache !== false && !$cache instanceof DataCache) {
             throw new InvalidArgumentException(sprintf(
                 '%s(): Argument #1 ($cache) must be of type %s|false',
@@ -2112,7 +2111,7 @@ class SimplePie
                             // Set raw_data to false here too, to signify that the cache
                             // is still valid.
                             $this->raw_data = false;
-                            if (isset($file)) { // FreshRSS
+                            if (isset($file)) { // FreshRSS // @phpstan-ignore isset.variable
                                 $old_cache_control = $this->data['headers']['cache-control'] ?? '';
                                 $old_max_age = \SimplePie\HTTP\Utils::get_http_max_age($this->data['headers']);
 
@@ -3622,8 +3621,6 @@ class SimplePie
             foreach ($urls as $arg) {
                 if ($arg instanceof SimplePie) {
                     $items = array_merge($items, $arg->get_items(0, $limit));
-
-                    // @phpstan-ignore-next-line Enforce PHPDoc type.
                 } else {
                     trigger_error('Arguments must be SimplePie objects', E_USER_WARNING);
                 }
