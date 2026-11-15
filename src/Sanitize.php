@@ -659,10 +659,11 @@ class Sanitize implements RegistryAware
     }
 
     /**
+     * @param \Dom\Document|\DOMDocument $document
      * @param array<string>|string $attributes
      * @return void
      */
-    public function replace_urls(\Dom\Document $document, string $tag, $attributes)
+    public function replace_urls($document, string $tag, $attributes)
     {
         if (!is_array($attributes)) {
             $attributes = [$attributes];
@@ -710,10 +711,12 @@ class Sanitize implements RegistryAware
 
     /**
      * Keep only allowed HTML elements (tags) and their allowed attributes.
+     *
+     * @param \Dom\Node|\DOMNode|\DOMElement|\Dom\Element $element
      */
-    protected function enforce_allowed_html_nodes(\Dom\Node $element, bool $allow_data_attr = true, bool $allow_aria_attr = true): void
+    protected function enforce_allowed_html_nodes($element, bool $allow_data_attr = true, bool $allow_aria_attr = true): void
     {
-        if ($element instanceof \Dom\Element) {
+        if ($element instanceof \DOMElement || $element instanceof \Dom\Element) {
             // NB: `tagName` of namespaced HTML elements is uppercased by libxml.
             // Use `localName` instead, which is ASCII-lowercased as per HTML,
             // except for case-adjusted SVG/MathML tag names (e.g. `foreignObject`).
@@ -726,7 +729,7 @@ class Sanitize implements RegistryAware
                     $nextSibling = $element->nextSibling;
                     while ($element->firstChild !== null) {
                         $child = $element->firstChild;
-                        if ($child instanceof \Dom\Text) {
+                        if ($child instanceof \DOMText || $child instanceof \Dom\Text) {
                             $child->nodeValue = htmlspecialchars($child->nodeValue ?? '', ENT_QUOTES, 'UTF-8');
                         }
                         if ($parent !== null) {
@@ -740,25 +743,31 @@ class Sanitize implements RegistryAware
                     }
                 }
                 if ($parent !== null) {
-                    $parent->removeChild($element);
+                    if ($element instanceof \DOMElement) {
+                        $parent->removeChild($element);
+                    } elseif ($parent instanceof \Dom\Element || $parent instanceof \Dom\Document) {
+                        $parent->removeChild($element);
+                    }
                     return;
                 }
             }
             $allowed_attrs = array_merge($this->allowed_html_elements_with_attributes[$tag] ?? [], $this->allowed_html_attributes);
-            for ($i = $element->attributes->length - 1; $i >= 0; $i--) {
-                $attr = $element->attributes[$i]->nodeName;
+            $attributes = $element->attributes ?? [];
+            for ($i = $attributes->length - 1; $i >= 0; $i--) {
+                $attrNode = $attributes[$i];
+                $attr = $attrNode->nodeName;
                 // Skip data-*, aria-* if allowed
-                if (($allow_data_attr && str_starts_with($attr, 'data-'))
-                    || ($allow_aria_attr && str_starts_with($attr, 'aria-'))) {
+                if (($allow_data_attr && substr($attr, 0, 5) === 'data-')
+                    || ($allow_aria_attr && substr($attr, 0, 5) === 'aria-')) {
                     continue;
                 }
 
                 if (!in_array($attr, $allowed_attrs, true)) {
-                    $element->removeAttributeNode($element->attributes[$i]);
+                    $element->removeAttributeNode($attrNode);
                 }
             }
         }
-        if ($element instanceof \Dom\Element || $element instanceof \Dom\Document) {
+        if ($element instanceof \DOMElement || $element instanceof \Dom\Element || $element instanceof \DOMDocument || $element instanceof \Dom\Document) {
             for ($i = $element->childNodes->length - 1; $i >= 0; $i--) {
                 $child = $element->childNodes->item($i);
                 if ($child !== null) {
@@ -824,7 +833,7 @@ class Sanitize implements RegistryAware
         // Note: content is parsed via the HTML5 parser, which does not namespace-process attributes
         $elements = $xpath->query('.//*[self::mml:math or self::svg:svg]/descendant-or-self::*[@href or @*[name()="xlink:href"]]');
         foreach ($elements as $element) {
-            if ($element instanceof \Dom\Element) {
+            if ($element instanceof \DOMElement || $element instanceof \Dom\Element) {
                 if ($element->hasAttribute('href')) {
                     $href = $element->getAttribute('href') ?? '';
                     if (!$this->is_allowed_scheme($href)) {
@@ -842,10 +851,11 @@ class Sanitize implements RegistryAware
     }
 
     /**
+     * @param \Dom\Document|\DOMDocument $document
      * @param int-mask-of<SimplePie::CONSTRUCT_*> $type
      * @return void
      */
-    protected function strip_tag(string $tag, \Dom\Document $document, \Dom\XPath $xpath, int $type)
+    protected function strip_tag(string $tag, $document, \Dom\XPath $xpath, int $type)
     {
         try {
             // Match the requested tag in any of the namespaces the HTML parser
@@ -862,7 +872,7 @@ class Sanitize implements RegistryAware
 
         if ($this->encode_instead_of_strip) {
             foreach ($elements as $element) {
-                if (!$element instanceof \Dom\Element) {
+                if (!$element instanceof \DOMElement && !$element instanceof \Dom\Element) {
                     continue;
                 }
                 $fragment = $document->createDocumentFragment();
@@ -903,7 +913,12 @@ class Sanitize implements RegistryAware
                     $fragment->appendChild($document->createTextNode('</' . $tag . '>'));
                 }
 
-                if (($parentNode = $element->parentNode) !== null) {
+                $parentNode = $element->parentNode;
+                if ($element instanceof \DOMElement) {
+                    if ($parentNode !== null) {
+                        $parentNode->replaceChild($fragment, $element);
+                    }
+                } elseif ($parentNode instanceof \Dom\Element || $parentNode instanceof \Dom\Document) {
                     $parentNode->replaceChild($fragment, $element);
                 }
             }
@@ -977,9 +992,10 @@ class Sanitize implements RegistryAware
 
     /**
      * @param array<string, string> $valuePairs
+     * @param \Dom\Document|\DOMDocument $document
      * @return void
      */
-    protected function add_attr(string $tag, array $valuePairs, \Dom\Document $document)
+    protected function add_attr(string $tag, array $valuePairs, $document)
     {
         $elements = $document->getElementsByTagName($tag);
         /** @var \Dom\Element $element */

@@ -128,7 +128,7 @@ class LocatorTest extends TestCase
         $queryResult = $xpath->query('//link');
 
         foreach ($queryResult as $element) {
-            if (!$element instanceof \Dom\Element) {
+            if (!$element instanceof \DOMElement && !$element instanceof \Dom\Element) {
                 continue;
             }
             $expected[] = 'http://example.com' . ($element->getAttribute('href') ?? '');

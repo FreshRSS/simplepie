@@ -14,13 +14,16 @@ const HTML_NO_DEFAULT_NS = 2147483648;
 // Hide from PHPStan to avoid divergent signature shapes of the legacy aliases
 if (!defined('__PHPSTAN_RUNNING__')):
 
-// The polyfilled node classes
-class_alias(\DOMNode::class, 'Dom\Node', false);
-class_alias(\DOMElement::class, 'Dom\Element', false);
-class_alias(\DOMText::class, 'Dom\Text', false);
-class_alias(\DOMComment::class, 'Dom\Comment', false);
-class_alias(\DOMNodeList::class, 'Dom\NodeList', false);
-class_alias(\DOMDocument::class, 'Dom\Document', false);
+// Aliasing internal classes requires PHP 8.3+
+if (\PHP_VERSION_ID >= 80300) {
+    // The polyfilled node classes
+    class_alias(\DOMNode::class, 'Dom\Node', false);
+    class_alias(\DOMElement::class, 'Dom\Element', false);
+    class_alias(\DOMText::class, 'Dom\Text', false);
+    class_alias(\DOMComment::class, 'Dom\Comment', false);
+    class_alias(\DOMNodeList::class, 'Dom\NodeList', false);
+    class_alias(\DOMDocument::class, 'Dom\Document', false);
+}
 
 /**
  * On the legacy path, the parser never puts elements in any namespace,
@@ -104,8 +107,11 @@ final class HTMLDocument extends \DOMDocument
     /**
      * Normalise to `attr=""` for parity.
      * It also emits end tags for void elements (e.g. `</source>`).
+     *
+     * @return string|false
      */
-    public function saveHTML(?\DOMNode $node = null): string|false
+    #[\ReturnTypeWillChange]
+    public function saveHTML(?\DOMNode $node = null)
     {
         $html = parent::saveHTML($node);
         if ($html === false) {
