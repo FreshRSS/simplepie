@@ -74,7 +74,7 @@ class Locator implements RegistryAware
 
         $body = $this->file->get_body_content();
 
-        if ($body != '') {
+        if (class_exists(\Dom\HTMLDocument::class) && $body != '') {
             // NB: Unlike with the legacy DOM API, parsing never fails, but invalid UTF-8 fails gracefully
             try {
                 $this->dom = \Dom\HTMLDocument::createFromString($body, LIBXML_NOERROR | \Dom\HTML_NO_DEFAULT_NS);
@@ -187,7 +187,7 @@ class Locator implements RegistryAware
         assert($this->registry !== null);
 
         if ($this->dom === null) {
-            throw new \SimplePie\Exception('DOMDocument not found, unable to use locator');
+            throw new \SimplePie\Exception('\Dom\Document not found, unable to use locator');
         }
         $this->http_base = $this->file->get_final_requested_uri();
         $this->base = $this->http_base;
@@ -233,7 +233,7 @@ class Locator implements RegistryAware
         assert($this->registry !== null);
 
         if ($this->dom === null) {
-            throw new \SimplePie\Exception('DOMDocument not found, unable to use locator');
+            throw new \SimplePie\Exception('\Dom\Document not found, unable to use locator');
         }
 
         $links = $this->dom->getElementsByTagName($name);
@@ -285,7 +285,7 @@ class Locator implements RegistryAware
         assert($this->registry !== null);
 
         if ($this->dom === null) {
-            throw new \SimplePie\Exception('DOMDocument not found, unable to use locator');
+            throw new \SimplePie\Exception('\Dom\Document not found, unable to use locator');
         }
 
         $links = $this->dom->getElementsByTagName('a');
@@ -331,8 +331,13 @@ class Locator implements RegistryAware
         assert($this->registry !== null);
 
         if ($this->dom === null) {
-            throw new \SimplePie\Exception('DOMDocument not found, unable to use '.
+            throw new \SimplePie\Exception('\Dom\Document not found, unable to use '.
                                           'locator');
+        }
+
+        if (!class_exists(\Dom\XPath::class)) {
+            throw new \SimplePie\Exception('\Dom\XPath not found, unable to use '.
+                                          'get_rel_link');
         }
 
         $xpath = new \Dom\XPath($this->dom);

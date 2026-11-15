@@ -2272,7 +2272,7 @@ class SimplePie
                 } catch (SimplePieException $e) {
                     // We need to unset this so that if SimplePie::set_file() has been called that object is untouched
                     unset($file);
-                    // This is usually because DOMDocument doesn't exist
+                    // This is usually because `\Dom\Document` doesn't exist
                     $this->error = $e->getMessage();
                     $this->registry->call(Misc::class, 'error', [$this->error, E_USER_NOTICE, $e->getFile(), $e->getLine()]);
                     return false;

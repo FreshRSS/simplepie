@@ -11,8 +11,9 @@ namespace Dom;
 
 const HTML_NO_DEFAULT_NS = 2147483648;
 
-// Hide from PHPStan to avoid divergent signature shapes of the legacy aliases
-if (!defined('__PHPSTAN_RUNNING__')):
+// Hide from PHPStan to avoid divergent signature shapes of the legacy aliases,
+// and also skip when legacy `ext-dom` is unavailable
+if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false)):
 
 // Aliasing internal classes requires PHP 8.3+
 if (\PHP_VERSION_ID >= 80300) {
