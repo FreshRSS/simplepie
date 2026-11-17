@@ -156,9 +156,11 @@ if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false))
             $document = new self();
             $options = ($options ?? 0) | LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_HTML_NODEFDTD;
 
+            // HTML standard encoding sniffing on first 1024 bytes:
+            $probe = substr($source, 0, 1024);
             // If the source itself declares an encoding, let the parser honour it, otherwise UTF-8.
-            $injectEncoding = $source !== '' && strncmp($source, "\xEF\xBB\xBF", 3) !== 0
-            && !preg_match('#<(?:meta|\?xml)[^>]*?(?:charset|encoding)\\s*=#i', $source);
+            $injectEncoding = $probe !== '' && strncmp($probe, "\xEF\xBB\xBF", 3) !== 0
+                && !preg_match('#<(?:meta|\?xml)[^>]*?(?:charset|encoding)\\s*=#i', $probe);
             if ($injectEncoding) {
                 $source = '<?xml encoding="UTF-8">' . $source;
             }
@@ -208,7 +210,11 @@ if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false))
                 return '';
             }
             // Drop void-element end tags emitted for e.g. `<source>`:
-            $html = (string) preg_replace('#(<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)\b[^>]*?>)</\2>#i', '$1', $html);
+            $html = preg_replace(
+                '#(<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)\b[^>]*?>)</\2>#i',
+                '$1',
+                $html
+            ) ?? $html;
             return (string) preg_replace_callback('#<[\w:-]+[^>]*?>#', static function (array $match): string {
                 $bools = 'allowfullscreen|async|autofocus|autoplay|checked|controls|default|defer|disabled|formnovalidate|hidden|' .
                     'inert|ismap|itemscope|loop|multiple|muted|nomodule|novalidate|open|playsinline|readonly|required|reversed|selected';
