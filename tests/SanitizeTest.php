@@ -45,7 +45,7 @@ HTML
             ,
             trim(preg_replace('/\R\s+/', '', $sanitize_whitelist->sanitize(
                 <<<HTML
-<details open title="Click to expand" onmouseover="alert(1)" xyz="1">
+<details open="" title="Click to expand" onmouseover="alert(1)" xyz="1">
     <summary data-xyz="123" aria-hidden="false">Details</summary>
     <x-custom>
         <p>...</p>
