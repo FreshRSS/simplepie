@@ -12,6 +12,8 @@ namespace Dom;
 
 const HTML_NO_DEFAULT_NS = 2147483648;
 
+// phpcs:disable PSR1.Classes.ClassDeclaration.MultipleClasses -- Polyfilled `Dom\` classes best co-exist in this file.
+
 // Hide from PHPStan to avoid divergent signature shapes of the legacy aliases,
 // and also skip when legacy `ext-dom` is unavailable
 if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false)) {
@@ -163,6 +165,7 @@ if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false))
 
             try {
                 // `HTML_NO_DEFAULT_NS` is unknown to the legacy `loadHTML()`
+                /** @var \DOMDocument $document */
                 $document->loadHTML($source, $options & ~HTML_NO_DEFAULT_NS);
             } catch (\ValueError $e) {
                 // the native API silently creates an empty document.
@@ -207,7 +210,8 @@ if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false))
             // Drop void-element end tags emitted for e.g. `<source>`:
             $html = (string) preg_replace('#(<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)\b[^>]*?>)</\2>#i', '$1', $html);
             return (string) preg_replace_callback('#<[\w:-]+[^>]*?>#', static function (array $match): string {
-                $bools = 'allowfullscreen|async|autofocus|autoplay|checked|controls|default|defer|disabled|formnovalidate|hidden|inert|ismap|itemscope|loop|multiple|muted|nomodule|novalidate|open|playsinline|readonly|required|reversed|selected';
+                $bools = 'allowfullscreen|async|autofocus|autoplay|checked|controls|default|defer|disabled|formnovalidate|hidden|' .
+                    'inert|ismap|itemscope|loop|multiple|muted|nomodule|novalidate|open|playsinline|readonly|required|reversed|selected';
                 // Only scan outside quoted attribute values, which have no raw `"`:
                 $parts = preg_split('#(="[^"]*")#', $match[0], -1, PREG_SPLIT_DELIM_CAPTURE);
                 if ($parts === false) {
@@ -245,6 +249,7 @@ if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false))
         public static function createFromString(string $source, ?int $options = null, ?string $overrideEncoding = null)
         {
             $document = new self();
+            /** @var \DOMDocument $document */
             if (@$document->loadXML($source, ($options ?? 0) | LIBXML_NOERROR | LIBXML_NOWARNING) !== true
                 || $document->documentElement === null) {
                 throw new \ValueError('Argument #1 ($source) must be a valid XML');
@@ -304,3 +309,5 @@ if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false))
         }
     }
 }
+
+// phpcs:enable PSR1.Classes.ClassDeclaration.MultipleClasses
