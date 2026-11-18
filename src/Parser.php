@@ -194,7 +194,7 @@ class Parser implements RegistryAware
 
         libxml_clear_errors();
         $xml = new \XMLReader();
-        $xml->xml($data);
+        $xml->xml($data, null, LIBXML_NONET);
         while (@$xml->read()) {
             switch ($xml->nodeType) {
                 case \XMLReader::END_ELEMENT:
