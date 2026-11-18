@@ -263,12 +263,15 @@ if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false))
                 trigger_error('`$overrideEncoding` is not supported by this polyfill', E_USER_WARNING);
             }
             $options = ($options ?? 0) | LIBXML_NOERROR | LIBXML_NOWARNING;
+            if ($source === '') {
+                $message = 'Argument #1 ($source) must not be empty';
+                // `\ValueError` requires PHP 8.0+
+                throw class_exists(\ValueError::class) ? new \ValueError($message) : new \Exception($message);
+            }
             /** @var \DOMDocument $document */
             if (@$document->loadXML($source, $options) !== true
                 || $document->documentElement === null) {
-                $message = 'Argument #1 ($source) must be a valid XML';
-                // `\ValueError` requires PHP 8.0+
-                throw class_exists(\ValueError::class) ? new \ValueError($message) : new \Exception($message);
+                throw new \DOMException('XML fragment is not well-formed', 12);
             }
             return $document;
         }
