@@ -55,7 +55,7 @@ if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false))
             try {
                 return (new \GT\CssXPath\Translator($selectors, $prefix))->asXPath();
             } catch (\Throwable $e) {
-                throw new \DOMException('Invalid CSS selector: ' . $selectors, 0, $e);
+                throw new \DOMException('Invalid CSS selector: ' . substr($selectors, 0, 100), 0, $e);
             }
         }
 
@@ -86,7 +86,7 @@ if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false))
             try {
                 return $xpath->query($this->cssToXPath($selectors, './/'), $this);
             } catch (\Throwable $e) {
-                throw $e instanceof \DOMException ? $e : new \DOMException('Invalid CSS selector: ' . $selectors, 0, $e);
+                throw $e instanceof \DOMException ? $e : new \DOMException('Invalid CSS selector: ' . substr($selectors, 0, 100), 0, $e);
             }
         }
 
@@ -104,7 +104,7 @@ if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false))
             try {
                 $result = $xpath->query($this->cssToXPath($selectors, 'descendant-or-self::'));
             } catch (\Throwable $e) {
-                throw $e instanceof \DOMException ? $e : new \DOMException('Invalid CSS selector: ' . $selectors, 0, $e);
+                throw $e instanceof \DOMException ? $e : new \DOMException('Invalid CSS selector: ' . substr($selectors, 0, 100), 0, $e);
             }
             for ($i = 0; $i < $result->length; $i++) {
                 $candidate = $result->item($i);
@@ -154,6 +154,9 @@ if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false))
         public static function createFromString(string $source, ?int $options = null, ?string $overrideEncoding = null)
         {
             $document = new self();
+            if ($overrideEncoding !== null) {
+                trigger_error('`$overrideEncoding` is not supported by this polyfill', E_USER_WARNING);
+            }
             $options = ($options ?? 0) | LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_HTML_NODEFDTD;
 
             // HTML standard encoding sniffing on first 1024 bytes:
@@ -255,10 +258,17 @@ if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false))
         public static function createFromString(string $source, ?int $options = null, ?string $overrideEncoding = null)
         {
             $document = new self();
+            if ($overrideEncoding !== null) {
+                // Parity divergence from the native implementation.
+                trigger_error('`$overrideEncoding` is not supported by this polyfill', E_USER_WARNING);
+            }
+            $options = ($options ?? 0) | LIBXML_NOERROR | LIBXML_NOWARNING;
             /** @var \DOMDocument $document */
-            if (@$document->loadXML($source, ($options ?? 0) | LIBXML_NOERROR | LIBXML_NOWARNING) !== true
+            if (@$document->loadXML($source, $options) !== true
                 || $document->documentElement === null) {
-                throw new \ValueError('Argument #1 ($source) must be a valid XML');
+                $message = 'Argument #1 ($source) must be a valid XML';
+                // `\ValueError` requires PHP 8.0+
+                throw class_exists(\ValueError::class) ? new \ValueError($message) : new \Exception($message);
             }
             return $document;
         }
@@ -309,7 +319,9 @@ if (!defined('__PHPSTAN_RUNNING__') && class_exists(\DOMDocument::class, false))
             $translated = $this->translate($expression);
             $result = @parent::query($translated, $contextNode, $registerNodeNS);
             if ($result === false) {
-                throw new \Exception('Invalid XPath expression: ' . $translated);
+                $message = 'Invalid XPath expression: ' . substr($translated, 0, 100);
+                // \ValueError requires PHP 8.0+
+                throw class_exists(\ValueError::class) ? new \ValueError($message) : new \Exception($message);
             }
             return $result;
         }
