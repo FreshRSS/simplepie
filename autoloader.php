@@ -3,6 +3,9 @@
 // SPDX-FileCopyrightText: 2004-2023 Ryan Parman, Sam Sneddon, Ryan McCue
 // SPDX-License-Identifier: BSD-3-Clause
 
+// Polyfill PHP 8.4+ `Dom\` classes
+require_once __DIR__ . '/compat/dom.php';
+
 /**
  * PSR-4 implementation for SimplePie.
  *
