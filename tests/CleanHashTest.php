@@ -30,11 +30,6 @@ class CleanHashTest extends TestCase
      */
     public function testCommentsAreIgnored(string $rss, string $expected): void
     {
-        // PCRE2 < 10.43 does not support relative quantifiers such as `{,8192}`,
-        // so the comment pattern of clean_hash() is then a no-op and the assertions cannot hold.
-        if (preg_match('#x.{,1}y#', 'xy') !== 1) {
-            self::markTestSkipped('PCRE2 10.43+ is required, such as the one bundled in PHP 8.4+');
-        }
         self::assertSame(sha1($expected), $this->cleanHash($rss));
     }
 
