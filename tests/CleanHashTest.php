@@ -17,6 +17,10 @@ class CleanHashTest extends TestCase
     protected function cleanHash(string $rss): string
     {
         $method = new ReflectionMethod(SimplePie::class, 'clean_hash');
+        if (PHP_VERSION_ID < 80100) {
+            // ReflectionMethod::setAccessible() is required before PHP 8.1, and deprecated since PHP 8.5.
+            $method->setAccessible(true);
+        }
         $hash = $method->invoke(new SimplePie(), $rss);
         return is_string($hash) ? $hash : '';
     }
