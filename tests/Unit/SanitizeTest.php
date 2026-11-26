@@ -426,4 +426,142 @@ HTML
             '<p>First</p><p>Second</p><p>Third</p><p>Fourth</p>',
         ];
     }
+
+    /**
+     * @return array<array{string}>
+     */
+    public static function rawTextElementDataProvider(): array
+    {
+        return [
+            'noembed' => ['noembed'],
+            'noframes' => ['noframes'],
+            'textarea' => ['textarea'],
+            'title' => ['title'],
+            'xmp' => ['xmp'],
+        ];
+    }
+
+    /**
+     * Browsers read the content of e.g. `<xmp>` as text ending at the first `</xmp>`,
+     * while the legacy libxml2 parser builds child elements there, and serializes
+     * `<!--...-->` and `&{...}` found in attribute values without escaping `<` and `>`.
+     *
+     * With the HTML5 parser (PHP 8.4+), `<title>` is RCDATA ending at the first
+     * `</title>` in the payload: its escaped head stays as the text of `<title>`,
+     * and the markup built beyond it — a `<form>` for this payload — is removed
+     * by the default strip list.
+     *
+     * @dataProvider rawTextElementDataProvider
+     */
+    public function testMarkupInRawTextElementKeepsOnlyText(string $tag): void
+    {
+        $sanitize = new Sanitize();
+        $sanitize->set_registry(new Registry());
+        $base = 'http://example.com/';
+
+        foreach (['<!--%s-->', '&amp;{%s}'] as $unescapedByLibxml) {
+            $title = sprintf($unescapedByLibxml, '</' . $tag . '><form method=post>');
+            $actual = $sanitize->sanitize(
+                '<' . $tag . '><a title="' . $title . '">Hello</a> <b>world</b></' . $tag . '>',
+                SIMPLEPIE_CONSTRUCT_HTML,
+                $base
+            );
+
+            // The attribute value must not terminate the raw text element early and become live markup
+            self::assertStringNotContainsString('<form', $actual);
+            self::assertStringContainsString('Hello', $actual);
+            self::assertStringContainsString('world', $actual);
+            self::assertNoExecutableMarkupIngested($actual);
+        }
+    }
+
+    /**
+     * @return array<array{string}>
+     */
+    public static function rawTextElementNothingStrippedProvider(): array
+    {
+        return [
+            'iframe' => ['iframe'],
+            'noscript' => ['noscript'],
+        ];
+    }
+
+    /**
+     * Same as testMarkupInRawTextElementKeepsOnlyText(), but with elements beyond the
+     * reach of the default strip list: nothing is stripped at all. `<noscript>` in
+     * particular still parses as markup with `Dom\HTMLDocument` (PHP 8.4+) — RAWTEXT
+     * handling only applies to browser-side parsing with scripting enabled — and
+     * `saveHtml()` serializes its text children literally, without escaping markup
+     * characters in attribute values, which a browser re-parsing with scripting
+     * enabled would turn into live markup beyond an early-terminated element.
+     *
+     * @dataProvider rawTextElementNothingStrippedProvider
+     */
+    public function testMarkupInRawTextElementKeepsOnlyTextWhenNothingIsStripped(string $tag): void
+    {
+        $sanitize = new Sanitize();
+        $sanitize->set_registry(new Registry());
+        $sanitize->strip_htmltags(false);
+        $base = 'http://example.com/';
+
+        $title = sprintf('<!--%s-->', '</' . $tag . '><img src=x onerror=alert(1)>');
+        $actual = $sanitize->sanitize(
+            '<' . $tag . '><a title="' . $title . '">Hello</a></' . $tag . '>',
+            SIMPLEPIE_CONSTRUCT_HTML,
+            $base
+        );
+
+        self::assertStringNotContainsString('onerror', $actual);
+        self::assertStringContainsString('Hello', $actual);
+        self::assertNoExecutableMarkupIngested($actual);
+    }
+
+    /**
+     * Same as testMarkupInRawTextElementKeepsOnlyText(), but with `<plaintext>`: per
+     * HTML5 it swallows everything after its start tag as text until the end of the
+     * document, never recognizing `</plaintext>`. The legacy libxml2 parser builds
+     * child elements in it, which the sanitizer flattens to text; with the HTML5
+     * parser (PHP 8.4+), the whole payload stays a single literal text node, so
+     * inert markup may remain visible in the output — hence no `<form` assertion
+     * here, unlike the other raw text element tests.
+     */
+    public function testMarkupInRawTextElementKeepsOnlyTextInPlaintext(): void
+    {
+        $sanitize = new Sanitize();
+        $sanitize->set_registry(new Registry());
+        $base = 'http://example.com/';
+
+        $title = sprintf('<!--%s-->', '</plaintext><form method=post>');
+        $actual = $sanitize->sanitize(
+            '<plaintext><a title="' . $title . '">Hello</a> <b>world</b></plaintext>',
+            SIMPLEPIE_CONSTRUCT_HTML,
+            $base
+        );
+
+        self::assertStringContainsString('Hello', $actual);
+        self::assertStringContainsString('world', $actual);
+        self::assertNoExecutableMarkupIngested($actual);
+    }
+
+    /**
+     * Asserts that re-parsing the HTML ingests no executable markup: no script
+     * elements, no event-handler attributes, and no markup characters embedded
+     * in attribute values, which older libxml2 would write unescaped.
+     */
+    private static function assertNoExecutableMarkupIngested(string $html): void
+    {
+        // Browser-fidelity re-ingest: the HTML5 parser on PHP 8.4+, the legacy libxml2 parser via the `Dom\` polyfill below
+        $document = \Dom\HTMLDocument::createFromString($html, LIBXML_NOERROR);
+        $xpath = new \Dom\XPath($document);
+        $xpath->registerNamespace('xh', 'http://www.w3.org/1999/xhtml');
+        $xpath->registerNamespace('svg', 'http://www.w3.org/2000/svg');
+        $xpath->registerNamespace('mml', 'http://www.w3.org/1998/Math/MathML');
+        $handlers = $xpath->query('//@*[starts-with(name(), "on")]');
+        $scripts = $xpath->query('//*[self::xh:script or self::svg:script or self::mml:script]');
+        $markupInAttributes = $xpath->query('//@*[contains(., "<")]');
+        // No `assertNotFalse()` needed: `Dom\XPath::query()` throws instead of returning `false`, on both engines
+        self::assertCount(0, $handlers);
+        self::assertCount(0, $scripts);
+        self::assertCount(0, $markupInAttributes);
+    }
 }
