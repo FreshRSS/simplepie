@@ -443,13 +443,13 @@ HTML
 
     /**
      * Browsers read the content of e.g. `<xmp>` as text ending at the first `</xmp>`,
-     * while libxml2 builds child elements there, and writes `<!--...-->` and `&{...}`
-     * found in their attribute values without escaping `<` and `>`.
+     * while the legacy libxml2 parser builds child elements there, and serializes
+     * `<!--...-->` and `&{...}` found in attribute values without escaping `<` and `>`.
      *
-     * With the HTML5 parser (PHP 8.4+), the content of `<title>` is RCDATA ending at
-     * the first `</title>` even inside an attribute value: the escaped head of the
-     * payload stays as the text of `<title>`, and the markup which the parser builds
-     * beyond it — a `<form>` for this payload — is removed by the default strip list.
+     * With the HTML5 parser (PHP 8.4+), `<title>` is RCDATA ending at the first
+     * `</title>` in the payload: its escaped head stays as the text of `<title>`,
+     * and the markup built beyond it — a `<form>` for this payload — is removed
+     * by the default strip list.
      *
      * @dataProvider rawTextElementDataProvider
      */
@@ -467,89 +467,62 @@ HTML
                 $base
             );
 
-            // The attribute value must not end the raw text element early in a browser and become live markup
+            // The attribute value must not terminate the raw text element early and become live markup
             self::assertStringNotContainsString('<form', $actual);
-            // Only the text may remain in a raw text element
             self::assertStringContainsString('Hello', $actual);
             self::assertStringContainsString('world', $actual);
-            // Whatever a consumer ingests when re-parsing the output must not be executable either
             self::assertNoExecutableMarkupIngested($actual);
         }
     }
 
     /**
-     * Same as testMarkupInRawTextElementKeepsOnlyText(), but with an element the default
-     * strip list removes (`<iframe>`), provided nothing is stripped at all.
-     *
-     * Regardless of what libxml2 makes of the payload — attribute glue on older
-     * versions, live markup beyond an early-terminated raw text element on newer
-     * ones — the sanitized output must not ingest anything executable.
+     * @return array<array{string}>
      */
-    public function testMarkupInRawTextElementKeepsOnlyTextWhenNothingIsStripped(): void
+    public static function rawTextElementNothingStrippedProvider(): array
+    {
+        return [
+            'iframe' => ['iframe'],
+            'noscript' => ['noscript'],
+        ];
+    }
+
+    /**
+     * Same as testMarkupInRawTextElementKeepsOnlyText(), but with elements beyond the
+     * reach of the default strip list: nothing is stripped at all. `<noscript>` in
+     * particular still parses as markup with `Dom\HTMLDocument` (PHP 8.4+) — RAWTEXT
+     * handling only applies to browser-side parsing with scripting enabled — and
+     * `saveHtml()` serializes its text children literally, without escaping markup
+     * characters in attribute values, which a browser re-parsing with scripting
+     * enabled would turn into live markup beyond an early-terminated element.
+     *
+     * @dataProvider rawTextElementNothingStrippedProvider
+     */
+    public function testMarkupInRawTextElementKeepsOnlyTextWhenNothingIsStripped(string $tag): void
     {
         $sanitize = new Sanitize();
         $sanitize->set_registry(new Registry());
         $sanitize->strip_htmltags(false);
         $base = 'http://example.com/';
 
-        $title = sprintf('<!--%s-->', '</iframe><img src=x onerror=alert(1)>');
+        $title = sprintf('<!--%s-->', '</' . $tag . '><img src=x onerror=alert(1)>');
         $actual = $sanitize->sanitize(
-            '<iframe><a title="' . $title . '">Hello</a></iframe>',
+            '<' . $tag . '><a title="' . $title . '">Hello</a></' . $tag . '>',
             SIMPLEPIE_CONSTRUCT_HTML,
             $base
         );
 
-        // Event handlers must not survive anywhere in the output
         self::assertStringNotContainsString('onerror', $actual);
-        // The regular text of the raw text element must remain
         self::assertStringContainsString('Hello', $actual);
-        // What a consumer ingests when re-parsing the output must not be executable either
         self::assertNoExecutableMarkupIngested($actual);
     }
 
     /**
-     * Same as testMarkupInRawTextElementKeepsOnlyTextWhenNothingIsStripped(), but with a
-     * `<noscript>` element: the modern HTML5 parser (`Dom\HTMLDocument`, PHP 8.4+) still
-     * parses its content as markup — RAWTEXT handling for `<noscript>` only applies to
-     * browser-side parsing with scripting enabled — and `saveHtml()` serializes text
-     * children of `<noscript>` literally, leaving markup characters in attribute values
-     * unescaped. A browser re-parsing the output with scripting enabled would terminate
-     * the element early on markup embedded in an attribute value.
-     */
-    public function testMarkupInRawTextElementKeepsOnlyTextInNoscript(): void
-    {
-        $sanitize = new Sanitize();
-        $sanitize->set_registry(new Registry());
-        $sanitize->strip_htmltags(false);
-        $base = 'http://example.com/';
-
-        $title = sprintf('<!--%s-->', '</noscript><img src=x onerror=alert(1)>');
-        $actual = $sanitize->sanitize(
-            '<noscript><a title="' . $title . '">Hello</a></noscript>',
-            SIMPLEPIE_CONSTRUCT_HTML,
-            $base
-        );
-
-        // Event handlers must not survive anywhere in the output
-        self::assertStringNotContainsString('onerror', $actual);
-        // The regular text of the raw text element must remain
-        self::assertStringContainsString('Hello', $actual);
-        // What a consumer ingests when re-parsing the output must not be executable either
-        self::assertNoExecutableMarkupIngested($actual);
-    }
-
-    /**
-     * Same as testMarkupInRawTextElementKeepsOnlyText(), but with `<plaintext>`,
-     * which is special among the raw text elements: per HTML5, a browser parses
-     * everything after its start tag as text until the end of the document, and
-     * never recognizes `</plaintext>`.
-     *
-     * The legacy libxml2 parser builds child elements in it, which this sanitizer
-     * flattens to text. With the HTML5 parser (PHP 8.4+), the whole payload stays
-     * a single literal text node — serialized verbatim, so that the start tag of
-     * a disallowed element may remain visible in the output. This cannot become
-     * live markup when re-parsed: whatever a browser ingests stays text until the
-     * end of the document, hence no `assertStringNotContainsString('<form', …)
+     * Same as testMarkupInRawTextElementKeepsOnlyText(), but with `<plaintext>`: per
+     * HTML5 it swallows everything after its start tag as text until the end of the
+     * document, never recognizing `</plaintext>`. The legacy libxml2 parser builds
+     * child elements in it, which the sanitizer flattens to text; with the HTML5
+     * parser (PHP 8.4+), the whole payload stays a single literal text node, so
+     * inert markup may remain visible in the output — hence no `<form` assertion
      * here, unlike the other raw text element tests.
      */
     public function testMarkupInRawTextElementKeepsOnlyTextInPlaintext(): void
@@ -565,24 +538,19 @@ HTML
             $base
         );
 
-        // The regular text of the raw text element must remain
         self::assertStringContainsString('Hello', $actual);
         self::assertStringContainsString('world', $actual);
-        // Whatever a consumer ingests when re-parsing the output must not be executable either
         self::assertNoExecutableMarkupIngested($actual);
     }
 
     /**
-     * Asserts that re-parsing the HTML ingests no executable markup:
-     * no script elements and no event-handler attributes, and no markup
-     * characters embedded in attribute values, which older libxml2 would
-     * write unescaped into the serialized output.
+     * Asserts that re-parsing the HTML ingests no executable markup: no script
+     * elements, no event-handler attributes, and no markup characters embedded
+     * in attribute values, which older libxml2 would write unescaped.
      */
     private static function assertNoExecutableMarkupIngested(string $html): void
     {
-        // Unlike the legacy API, parsing never fails (no recovery needed).
-        // The HTML5 parser makes this a browser-fidelity ingest check on PHP 8.4+,
-        // while the `Dom\` polyfill maps it onto the legacy libxml2 parser below 8.4.
+        // Browser-fidelity re-ingest: the HTML5 parser on PHP 8.4+, the legacy libxml2 parser via the `Dom\` polyfill below
         $document = \Dom\HTMLDocument::createFromString($html, LIBXML_NOERROR);
         $xpath = new \Dom\XPath($document);
         $xpath->registerNamespace('xh', 'http://www.w3.org/1999/xhtml');
@@ -591,9 +559,7 @@ HTML
         $handlers = $xpath->query('//@*[starts-with(name(), "on")]');
         $scripts = $xpath->query('//*[self::xh:script or self::svg:script or self::mml:script]');
         $markupInAttributes = $xpath->query('//@*[contains(., "<")]');
-        self::assertNotFalse($handlers);
-        self::assertNotFalse($scripts);
-        self::assertNotFalse($markupInAttributes);
+        // No `assertNotFalse()` needed: `Dom\XPath::query()` throws instead of returning `false`, on both engines
         self::assertCount(0, $handlers);
         self::assertCount(0, $scripts);
         self::assertCount(0, $markupInAttributes);
