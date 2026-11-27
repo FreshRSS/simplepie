@@ -78,6 +78,13 @@ class File implements Response
     private $permanentUrlMutable = true;
 
     /**
+     * The HTTP headers known not to carry credentials.
+     * Matches either a "Name: value" header line, or just a "Name" header key.
+     */
+    private const SAFE_HEADERS_PATTERN = '/^(Accept|Accept-Charset|Accept-Encoding|Accept-Language|Cache-Control|DNT|Pragma|' .
+        'Sec-[\\w-]+|Upgrade-Insecure-Requests|User-Agent)(\\s*:|$)/i';
+
+    /**
      * @param string $url
      * @param int $timeout
      * @param int $redirects
@@ -300,8 +307,7 @@ class File implements Response
                                         $curl_options[CURLOPT_HTTPHEADER] = array_filter(
                                             $curl_options[CURLOPT_HTTPHEADER],
                                             function ($header) {
-                                                return is_string($header) && preg_match('/^(Accept|Accept-Charset|Accept-Encoding|Accept-Language|Cache-Control|DNT|Pragma|' .
-                                                    'Sec-[\\w-]+|Upgrade-Insecure-Requests|User-Agent)\\s*:/i', $header) === 1;
+                                                return is_string($header) && preg_match(self::SAFE_HEADERS_PATTERN, $header) === 1;
                                             }
                                         );
                                     }
@@ -419,10 +425,11 @@ class File implements Response
                                     ($url_parts_from['host'] ?? '') === ($url_parts_to['host'] ?? '') &&
                                     ($url_parts_from['port'] ?? '') === ($url_parts_to['port'] ?? '');
                                 if (!$sameOriginRedirect) {
+                                    // Do not leak authentication headers to other origins
                                     $headers = array_filter(
                                         $headers,
-                                        function (string $key) {
-                                            return !preg_match('/^(Cookie|Authorization)$/i', $key);
+                                        function ($key) {
+                                            return is_string($key) && preg_match(self::SAFE_HEADERS_PATTERN, $key) === 1;
                                         },
                                         ARRAY_FILTER_USE_KEY
                                     );

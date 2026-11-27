@@ -2049,7 +2049,7 @@ class SimplePie
                     if ($this->data['feed_url'] !== $this->data['url']) {
                         // Like in the Locator, credentials are only for the origin they were given for
                         $this->curl_options = Misc::curl_options_for_origin($this->curl_options, $this->data['url'], $this->data['feed_url']);
-                        if ($this->http_client instanceof FileClient) {
+                        if (is_object($this->http_client) && $this->http_client instanceof FileClient) {
                             $this->http_client = null;
                         }
                         $this->set_feed_url($this->data['feed_url']);
