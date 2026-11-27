@@ -78,13 +78,6 @@ class File implements Response
     private $permanentUrlMutable = true;
 
     /**
-     * The HTTP headers known not to carry credentials.
-     * Matches either a "Name: value" header line, or just a "Name" header key.
-     */
-    private const SAFE_HEADERS_PATTERN = '/^(Accept|Accept-Charset|Accept-Encoding|Accept-Language|Cache-Control|DNT|Pragma|' .
-        'Sec-[\\w-]+|Upgrade-Insecure-Requests|User-Agent)(\\s*:|$)/i';
-
-    /**
      * @param string $url
      * @param int $timeout
      * @param int $redirects
@@ -305,24 +298,13 @@ class File implements Response
                                     ($url_parts_from['host'] ?? '') === ($url_parts_to['host'] ?? '') &&
                                     ($url_parts_from['port'] ?? '') === ($url_parts_to['port'] ?? '');
                                 if (!$sameOriginRedirect) {
-                                    if (isset($curl_options[CURLOPT_POSTFIELDS])) {
-                                        // The request body (e.g. an access token) is only meant for the original origin,
-                                        // and 307 and 308 must not change the HTTP method, so do not follow the redirection
-                                        $this->status_code = 0;
-                                        $this->error = 'Refused cross-origin redirect of a request with a body, from “' .
-                                            \SimplePie\Misc::url_remove_credentials($url) . '” to “' . \SimplePie\Misc::url_remove_credentials($location) . '”';
-                                        $this->success = false;
-                                        return;
-                                    }
                                     unset($curl_options[CURLOPT_COOKIE]);
                                     unset($curl_options[CURLOPT_USERPWD]);
                                     if (is_array($curl_options[CURLOPT_HTTPHEADER] ?? null)) {
-                                        // Credentials can be in any custom header (e.g. Private-Token, X-Api-Key),
-                                        // so only keep the headers known not to carry any
                                         $curl_options[CURLOPT_HTTPHEADER] = array_filter(
                                             $curl_options[CURLOPT_HTTPHEADER],
                                             function ($header) {
-                                                return is_string($header) && preg_match(self::SAFE_HEADERS_PATTERN, $header) === 1;
+                                                return is_string($header) && !preg_match('/^(Cookie|Authorization)\s*:/i', $header);
                                             }
                                         );
                                     }
@@ -440,11 +422,10 @@ class File implements Response
                                     ($url_parts_from['host'] ?? '') === ($url_parts_to['host'] ?? '') &&
                                     ($url_parts_from['port'] ?? '') === ($url_parts_to['port'] ?? '');
                                 if (!$sameOriginRedirect) {
-                                    // Do not leak authentication headers to other origins
                                     $headers = array_filter(
                                         $headers,
-                                        function ($key) {
-                                            return is_string($key) && preg_match(self::SAFE_HEADERS_PATTERN, $key) === 1;
+                                        function (string $key) {
+                                            return !preg_match('/^(Cookie|Authorization)$/i', $key);
                                         },
                                         ARRAY_FILTER_USE_KEY
                                     );
